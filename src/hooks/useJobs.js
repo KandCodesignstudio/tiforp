@@ -1,9 +1,25 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { supabase } from '../config/supabase';
 import { MOCK_JOBS } from '../config/mockData';
 
-const USE_MOCK = true; // Set to false after configuring Firebase
+const USE_MOCK = true; // Set to false after configuring Supabase
+
+function transformJob(row) {
+  return {
+    id: row.id,
+    jobNumber: row.job_number,
+    status: row.status,
+    client: row.client ?? {},
+    description: row.description,
+    trips: (row.trips ?? []).map((t) => ({
+      ...t,
+      scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null,
+    })),
+    attachments: row.attachments ?? [],
+    nextTrip: row.next_trip ? new Date(row.next_trip) : null,
+    createdAt: row.created_at ? new Date(row.created_at) : null,
+  };
+}
 
 export function useJobs() {
   const [jobs, setJobs] = useState([]);
@@ -16,18 +32,34 @@ export function useJobs() {
       return;
     }
 
-    const q = query(collection(db, 'jobs'), orderBy('createdAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setJobs(data);
-      setLoading(false);
-    });
-    return unsub;
+    // Initial fetch
+    supabase
+      .from('jobs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error) setJobs((data ?? []).map(transformJob));
+        setLoading(false);
+      });
+
+    // Real-time subscription
+    const channel = supabase
+      .channel('jobs-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
+        supabase
+          .from('jobs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .then(({ data }) => setJobs((data ?? []).map(transformJob)));
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
   }, []);
 
   const updateJobStatus = async (jobId, status) => {
     if (USE_MOCK) return;
-    await updateDoc(doc(db, 'jobs', jobId), { status });
+    await supabase.from('jobs').update({ status }).eq('id', jobId);
   };
 
   return { jobs, loading, updateJobStatus };
