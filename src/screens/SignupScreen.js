@@ -44,7 +44,7 @@ export default function SignupScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join the ITFORP NOVA platform</Text>
+          <Text style={styles.subtitle}>Join the ITforP Core platform</Text>
         </View>
 
         <View style={styles.form}>

@@ -1,4 +1,4 @@
-# Supabase Setup for ITFORP NOVA
+# Supabase Setup for ITforP Core
 
 ## Quick Start (Mock Data)
 
@@ -17,7 +17,7 @@ Scan the QR code with **Expo Go** on your phone.
 ### 1. Create a Supabase Project
 
 1. Go to https://supabase.com/dashboard
-2. Click **New project** — name it `itforp-nova`
+2. Click **New project** — name it `itforp-core`
 3. Choose a region close to your users and set a database password
 
 ### 2. Get Your API Keys

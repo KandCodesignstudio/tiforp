@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ITFORP NOVA",
-    "slug": "itforp-nova",
+    "name": "ITforP Core",
+    "slug": "itforp-core",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

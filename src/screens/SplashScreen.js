@@ -25,8 +25,8 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
-        <Text style={styles.brandSmall}>ITFORP</Text>
-        <Text style={styles.brandLarge}>NOVA</Text>
+        <Text style={styles.brandSmall}>ITforP</Text>
+        <Text style={styles.brandLarge}>CORE</Text>
         <Text style={styles.tagline}>Technician Field Operations</Text>
       </Animated.View>
     </View>

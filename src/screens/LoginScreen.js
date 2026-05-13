@@ -34,8 +34,8 @@ export default function LoginScreen({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.brandSmall}>ITFORP</Text>
-          <Text style={styles.brandLarge}>NOVA</Text>
+          <Text style={styles.brandSmall}>ITforP</Text>
+          <Text style={styles.brandLarge}>CORE</Text>
         </View>
 
         <View style={styles.form}>
