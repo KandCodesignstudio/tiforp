@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView, Image,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Colors } from '../utils/colors';
@@ -34,8 +34,11 @@ export default function LoginScreen({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.brandSmall}>ITforP</Text>
-          <Text style={styles.brandLarge}>CORE</Text>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.form}>
@@ -98,18 +101,9 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   header: { alignItems: 'center', marginBottom: 40 },
-  brandSmall: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.accentLight,
-    letterSpacing: 5,
-    marginBottom: -2,
-  },
-  brandLarge: {
-    fontSize: 60,
-    fontWeight: '900',
-    color: Colors.white,
-    letterSpacing: -1,
+  logo: {
+    width: 220,
+    height: 120,
   },
   form: { width: '100%', alignItems: 'center' },
   input: {
