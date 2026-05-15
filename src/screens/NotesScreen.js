@@ -36,7 +36,7 @@ function NoteCard({ note }) {
 
 export default function NotesScreen({ route }) {
   const { jobId } = route.params;
-  const { user, isAdmin } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const { jobs } = useJobs({ isAdmin, userId: user?.id, channelId: 'notes' });
   const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
   const { notes, addNote } = useNotes(jobId);
@@ -54,7 +54,7 @@ export default function NotesScreen({ route }) {
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const author = user?.email ?? 'Tech';
+    const author = profile?.full_name?.trim() || user?.email || 'Tech';
     setText('');
     await addNote(jobId, trimmed, author, selectedTrip);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
