@@ -12,7 +12,7 @@ function transformNotification(row) {
   };
 }
 
-export function useNotificationInbox(userId) {
+export function useNotificationInbox(userId, channelId = 'default') {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +34,7 @@ export function useNotificationInbox(userId) {
     fetchAll();
 
     const channel = supabase
-      .channel(`notifications-${userId}`)
+      .channel(`notifications-${userId}-${channelId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },

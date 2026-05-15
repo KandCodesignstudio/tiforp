@@ -49,7 +49,7 @@ function NotificationRow({ item, onPress, onDelete }) {
 export default function NotificationsScreen({ navigation }) {
   const { user } = useAuth();
   const { notifications, unreadCount, markRead, markAllRead, remove, refresh } =
-    useNotificationInbox(user?.id);
+    useNotificationInbox(user?.id, 'inbox');
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = () => {

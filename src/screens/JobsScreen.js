@@ -83,7 +83,7 @@ const FILTERS = [
 export default function JobsScreen({ navigation }) {
   const { logout, user, profile, isAdmin } = useAuth();
   const { jobs, loading, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'list' });
-  const { unreadCount } = useNotificationInbox(user?.id);
+  const { unreadCount } = useNotificationInbox(user?.id, 'badge');
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
 
