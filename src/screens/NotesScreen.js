@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useJobs } from '../hooks/useJobs';
 import { useNotes } from '../hooks/useNotes';
 import { Colors } from '../utils/colors';
 
@@ -34,14 +35,20 @@ function NoteCard({ note }) {
 }
 
 export default function NotesScreen({ route }) {
-  const { job } = route.params;
-  const { user } = useAuth();
-  const { notes, addNote } = useNotes(job.id);
+  const { jobId } = route.params;
+  const { user, isAdmin } = useAuth();
+  const { jobs } = useJobs({ isAdmin, userId: user?.id, channelId: 'notes' });
+  const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
+  const { notes, addNote } = useNotes(jobId);
   const [text, setText] = useState('');
-  const [selectedTrip, setSelectedTrip] = useState(job.trips?.[0]?.tripNumber ?? 1);
   const listRef = useRef(null);
 
-  const trips = job.trips ?? [];
+  const trips = job?.trips ?? [];
+  const [selectedTrip, setSelectedTrip] = useState(
+    () => trips.find((t) => t.status !== 'completed' && t.status !== 'for_return')?.tripNumber
+      ?? trips[0]?.tripNumber
+      ?? 1
+  );
   const filteredNotes = notes.filter((n) => n.tripNumber === selectedTrip);
 
   const handleSend = async () => {
@@ -49,7 +56,7 @@ export default function NotesScreen({ route }) {
     if (!trimmed) return;
     const author = user?.email ?? 'Tech';
     setText('');
-    await addNote(job.id, trimmed, author, selectedTrip);
+    await addNote(jobId, trimmed, author, selectedTrip);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   };
 

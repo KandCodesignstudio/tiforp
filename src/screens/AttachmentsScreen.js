@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions,
+  ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -29,6 +29,12 @@ function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatTripDate(date) {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  return `${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}-${d.getFullYear()}`;
 }
 
 const FILE_ICONS = {
@@ -62,7 +68,6 @@ function AttachmentRow({ item, onDelete, onOpen }) {
     </TouchableOpacity>
   );
 }
-
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
@@ -98,11 +103,22 @@ export default function AttachmentsScreen({ route }) {
   const [viewer, setViewer] = useState(null);
 
   const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
+  const trips = job?.trips ?? [];
   const attachments = job?.attachments ?? [];
+
+  const [selectedTrip, setSelectedTrip] = useState(
+    () => trips.find((t) => t.status !== 'completed' && t.status !== 'for_return')?.tripNumber
+      ?? trips[0]?.tripNumber
+      ?? 1
+  );
+
+  const filteredAttachments = attachments.filter(
+    (a) => (a.tripNumber ?? 1) === selectedTrip
+  );
 
   const addAttachment = async (file) => {
     const safeName = (file.name ?? `file_${Date.now()}`).replace(/[^\w.\-]/g, '_');
-    const path = `${jobId}/${Date.now()}_${safeName}`;
+    const path = `${jobId}/trip${selectedTrip}_${Date.now()}_${safeName}`;
 
     const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' });
     const arrayBuffer = base64ToArrayBuffer(base64);
@@ -128,6 +144,7 @@ export default function AttachmentsScreen({ route }) {
       size: file.size,
       path,
       url: pub.publicUrl,
+      tripNumber: selectedTrip,
     };
 
     const updatedAttachments = [...attachments, newAttachment];
@@ -143,7 +160,7 @@ export default function AttachmentsScreen({ route }) {
       const techName = profile?.full_name ?? 'Technician';
       notifyAdmins(
         'New Attachment Uploaded',
-        `${techName} uploaded "${file.name}" on job ${job?.jobNumber ?? jobId}`,
+        `${techName} uploaded "${file.name}" on Trip ${selectedTrip} of job ${job?.jobNumber ?? jobId}`,
         { jobId }
       ).catch(() => {});
     }
@@ -185,13 +202,9 @@ export default function AttachmentsScreen({ route }) {
   };
 
   const openAttachment = (item) => {
-    if (isImage(item.name) && item.url) {
-      setViewer(item);
-    } else if (item.url) {
-      Linking.openURL(item.url);
-    } else {
-      Alert.alert('Unavailable', 'This attachment has no remote URL.');
-    }
+    if (isImage(item.name) && item.url) setViewer(item);
+    else if (item.url) Linking.openURL(item.url);
+    else Alert.alert('Unavailable', 'This attachment has no remote URL.');
   };
 
   const deleteAttachment = (id) => {
@@ -199,8 +212,7 @@ export default function AttachmentsScreen({ route }) {
     Alert.alert('Remove Attachment', 'Remove this file?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Remove',
-        style: 'destructive',
+        text: 'Remove', style: 'destructive',
         onPress: async () => {
           try {
             if (target?.path) await supabase.storage.from(BUCKET).remove([target.path]);
@@ -217,8 +229,29 @@ export default function AttachmentsScreen({ route }) {
 
   return (
     <View style={styles.container}>
+      {trips.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabs}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {trips.map((t) => (
+            <TouchableOpacity
+              key={t.id ?? t.tripNumber}
+              style={[styles.tab, t.tripNumber === selectedTrip && styles.tabActive]}
+              onPress={() => setSelectedTrip(t.tripNumber)}
+            >
+              <Text style={[styles.tabText, t.tripNumber === selectedTrip && styles.tabTextActive]}>
+                TRIP {t.tripNumber}{t.scheduledAt ? ` (${formatTripDate(t.scheduledAt)})` : ''}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       <FlatList
-        data={attachments}
+        data={filteredAttachments}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -227,7 +260,7 @@ export default function AttachmentsScreen({ route }) {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="cloud-upload-outline" size={48} color={Colors.lightGray} />
-            <Text style={styles.emptyText}>No attachments yet</Text>
+            <Text style={styles.emptyText}>No attachments for Trip {selectedTrip}</Text>
             <Text style={styles.emptySubText}>Tap + to add files or photos</Text>
           </View>
         }
@@ -236,11 +269,11 @@ export default function AttachmentsScreen({ route }) {
       {uploading && (
         <View style={styles.uploadOverlay}>
           <ActivityIndicator size="small" color={Colors.white} />
-          <Text style={styles.uploadText}>Uploading...</Text>
+          <Text style={styles.uploadText}>Uploading to Trip {selectedTrip}...</Text>
         </View>
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={() => Alert.alert('Add Attachment', 'Choose source', [
+      <TouchableOpacity style={styles.fab} onPress={() => Alert.alert('Add Attachment', `Upload to Trip ${selectedTrip}`, [
         { text: 'Document / File', onPress: pickDocument },
         { text: 'Photo Library', onPress: pickPhoto },
         { text: 'Cancel', style: 'cancel' },
@@ -248,22 +281,13 @@ export default function AttachmentsScreen({ route }) {
         <Ionicons name="add" size={28} color={Colors.white} />
       </TouchableOpacity>
 
-      {/* Fullscreen image viewer */}
       <Modal visible={!!viewer} transparent animationType="fade" onRequestClose={() => setViewer(null)}>
         <SafeAreaView style={styles.viewerBg}>
           <TouchableOpacity style={styles.viewerClose} onPress={() => setViewer(null)}>
             <Ionicons name="close-circle" size={36} color={Colors.white} />
           </TouchableOpacity>
-          {viewer && (
-            <Image
-              source={{ uri: viewer.url }}
-              style={styles.viewerImage}
-              resizeMode="contain"
-            />
-          )}
-          {viewer && (
-            <Text style={styles.viewerName} numberOfLines={1}>{viewer.name}</Text>
-          )}
+          {viewer && <Image source={{ uri: viewer.url }} style={styles.viewerImage} resizeMode="contain" />}
+          {viewer && <Text style={styles.viewerName} numberOfLines={1}>{viewer.name}</Text>}
         </SafeAreaView>
       </Modal>
     </View>
@@ -272,6 +296,12 @@ export default function AttachmentsScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.screenBg },
+  tabs: { backgroundColor: Colors.primary, maxHeight: 48 },
+  tabsContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  tab: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)' },
+  tabActive: { backgroundColor: Colors.white },
+  tabText: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
+  tabTextActive: { color: Colors.primary },
   list: { padding: 16, paddingBottom: 100 },
   row: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white,
@@ -279,9 +309,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  thumb: {
-    width: 56, height: 56, borderRadius: 8, marginRight: 12, backgroundColor: Colors.lightGray,
-  },
+  thumb: { width: 56, height: 56, borderRadius: 8, marginRight: 12, backgroundColor: Colors.lightGray },
   iconWrap: {
     width: 56, height: 56, borderRadius: 8,
     backgroundColor: Colors.lightGray, alignItems: 'center', justifyContent: 'center', marginRight: 12,
@@ -306,14 +334,8 @@ const styles = StyleSheet.create({
     shadowColor: Colors.accent, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
   },
-  viewerBg: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  viewerBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' },
   viewerClose: { position: 'absolute', top: 50, right: 16, zIndex: 10 },
   viewerImage: { width: SCREEN_W, height: SCREEN_H * 0.75 },
-  viewerName: {
-    color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 16,
-    paddingHorizontal: 24, textAlign: 'center',
-  },
+  viewerName: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 16, paddingHorizontal: 24, textAlign: 'center' },
 });
