@@ -101,7 +101,6 @@ export default function JobsScreen({ navigation }) {
 
   const onRefresh = () => {
     setRefreshing(true);
-    setMotivationalMessage(getRandomMessage());
     Promise.resolve(refresh()).finally(() => setRefreshing(false));
   };
 
