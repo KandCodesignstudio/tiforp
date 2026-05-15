@@ -195,7 +195,7 @@ export default function JobOverviewScreen({ route }) {
         {trips?.map((trip, idx) => {
           const tInfo = getTripStatus(trip.status);
           return (
-            <View key={trip.id} style={[styles.tripRow, idx < trips.length - 1 && styles.tripBorder]}>
+            <View key={trip.id ?? `trip-${idx}`} style={[styles.tripRow, idx < trips.length - 1 && styles.tripBorder]}>
               <View style={styles.tripLeft}>
                 <Text style={styles.tripLabel}>Trip {trip.tripNumber}</Text>
                 <Text style={styles.tripDate}>{formatTripDate(trip.scheduledAt)}</Text>

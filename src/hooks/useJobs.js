@@ -12,8 +12,9 @@ function transformJob(row) {
     techPaid: row.tech_paid ?? false,
     client: row.client ?? {},
     description: row.description,
-    trips: (row.trips ?? []).map((t) => ({
+    trips: (row.trips ?? []).map((t, idx) => ({
       ...t,
+      id: t.id ?? `trip_${row.id}_${idx}`,
       scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null,
     })),
     attachments: row.attachments ?? [],
