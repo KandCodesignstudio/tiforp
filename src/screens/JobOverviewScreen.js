@@ -14,11 +14,15 @@ import { TabActions } from '@react-navigation/native';
 
 function MapWithPin({ address }) {
   const [coords, setCoords] = useState(null);
-  const [failed, setFailed] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
+  const [geocodeFailed, setGeocodeFailed] = useState(false);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || '')}`;
 
   useEffect(() => {
     if (!address) return;
+    setCoords(null);
+    setImgFailed(false);
+    setGeocodeFailed(false);
     fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
       { headers: { 'User-Agent': 'ITforPApp/1.0' } }
@@ -28,15 +32,17 @@ function MapWithPin({ address }) {
         if (data?.[0]) {
           setCoords({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) });
         } else {
-          setFailed(true);
+          setGeocodeFailed(true);
         }
       })
-      .catch(() => setFailed(true));
+      .catch(() => setGeocodeFailed(true));
   }, [address]);
 
-  if (failed) {
+  const openMaps = () => Linking.openURL(mapsUrl);
+
+  if (geocodeFailed || (coords && imgFailed)) {
     return (
-      <TouchableOpacity style={styles.mapFallback} onPress={() => Linking.openURL(mapsUrl)} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.mapFallback} onPress={openMaps} activeOpacity={0.8}>
         <Ionicons name="map-outline" size={32} color={Colors.accent} />
         <Text style={styles.mapFallbackText}>Tap to open in Maps</Text>
         <Text style={styles.mapFallbackAddr} numberOfLines={1}>{address}</Text>
@@ -53,13 +59,19 @@ function MapWithPin({ address }) {
   }
 
   const staticUrl =
-    `https://staticmap.openstreetmap.de/staticmap.php` +
-    `?center=${coords.lat},${coords.lon}&zoom=15&size=600x300` +
-    `&markers=${coords.lat},${coords.lon},ol-marker`;
+    `https://maps.geoapify.com/v1/staticmap?style=osm-bright-smooth` +
+    `&width=600&height=300&center=lonlat:${coords.lon},${coords.lat}&zoom=15` +
+    `&marker=lonlat:${coords.lon},${coords.lat};type:awesome;color:%230f2a55;size:large` +
+    `&apiKey=b0ccd3dce6304ef194e03e9e81d2c64d`;
 
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={() => Linking.openURL(mapsUrl)} style={styles.mapContainer}>
-      <Image source={{ uri: staticUrl }} style={styles.map} resizeMode="cover" />
+    <TouchableOpacity activeOpacity={0.9} onPress={openMaps} style={styles.mapContainer}>
+      <Image
+        source={{ uri: staticUrl }}
+        style={styles.map}
+        resizeMode="cover"
+        onError={() => setImgFailed(true)}
+      />
       <View style={styles.mapOpenBtn}>
         <Ionicons name="navigate-outline" size={13} color={Colors.white} />
         <Text style={styles.mapOpenBtnText}>Open in Maps</Text>
@@ -550,7 +562,7 @@ const styles = StyleSheet.create({
   jobNumberBanner: { fontSize: 14, fontWeight: '700', color: Colors.text },
   jobStatusBannerText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   mapContainer: { height: 180, borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
-  map: { ...StyleSheet.absoluteFillObject },
+  map: { width: '100%', height: 180 },
   mapOpenBtn: {
     position: 'absolute', bottom: 10, right: 10,
     flexDirection: 'row', alignItems: 'center', gap: 4,
