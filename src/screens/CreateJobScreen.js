@@ -24,7 +24,7 @@ export default function CreateJobScreen({ navigation }) {
 
   const filteredTechs = useMemo(() => {
     const q = techSearch.trim().toLowerCase();
-    if (!q) return technicians;
+    if (!q) return [];
     return technicians.filter((t) => (t.full_name ?? '').toLowerCase().includes(q));
   }, [technicians, techSearch]);
 
@@ -140,7 +140,7 @@ export default function CreateJobScreen({ navigation }) {
 
         {loadingTechs ? (
           <ActivityIndicator color={Colors.accent} style={{ marginVertical: 16 }} />
-        ) : filteredTechs.length === 0 ? (
+        ) : techSearch.trim().length === 0 ? null : filteredTechs.length === 0 ? (
           <Text style={styles.noTechs}>No technicians match "{techSearch}".</Text>
         ) : (
           filteredTechs.map((tech) => {
