@@ -1,0 +1,4 @@
+job_number,client_name,store_number,address,description,scheduled_at,scope_of_work,technician_email,priority,po_number,contact_phone
+JOB-101,METRO RETAIL GROUP,STORE #0089,123 Main St Dallas TX 75201,Full hardware audit and signal test,2026-06-15 09:00,"Check all POS terminals, verify network drops, document findings",tech@yourtest.com,High,PO-44521,214-555-0142
+JOB-102,CITY BANK,BRANCH #04,456 Oak Ave Houston TX 77002,Quarterly signal sweep,2026-06-20 10:00,"Measure WiFi coverage in all zones, replace 2 access points",tech@yourtest.com,Medium,PO-44522,713-555-0188
+JOB-103,SUNSET MEDICAL,SUITE 200,789 Sunset Blvd Austin TX 78701,Install new networking equipment,2026-06-25 08:30,"Mount 4 new APs, run cable to back office, test throughput",tech@yourtest.com,Low,PO-44523,512-555-0199
