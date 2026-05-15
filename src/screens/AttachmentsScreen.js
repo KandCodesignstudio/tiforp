@@ -6,7 +6,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Colors } from '../utils/colors';
 import { supabase } from '../config/supabase';
 import { notifyAdmins } from '../utils/notifications';
@@ -63,28 +62,6 @@ function AttachmentRow({ item, onDelete, onOpen }) {
   );
 }
 
-const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-function decodeBase64(b64) {
-  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, '');
-  const len = clean.length;
-  let pad = 0;
-  if (clean[len - 1] === '=') pad++;
-  if (clean[len - 2] === '=') pad++;
-  const bufferLength = (len * 3) / 4 - pad;
-  const bytes = new Uint8Array(bufferLength);
-  let p = 0;
-  for (let i = 0; i < len; i += 4) {
-    const e1 = BASE64_CHARS.indexOf(clean[i]);
-    const e2 = BASE64_CHARS.indexOf(clean[i + 1]);
-    const e3 = BASE64_CHARS.indexOf(clean[i + 2]);
-    const e4 = BASE64_CHARS.indexOf(clean[i + 3]);
-    if (p < bufferLength) bytes[p++] = (e1 << 2) | (e2 >> 4);
-    if (p < bufferLength) bytes[p++] = ((e2 & 15) << 4) | (e3 >> 2);
-    if (p < bufferLength) bytes[p++] = ((e3 & 3) << 6) | (e4 & 63);
-  }
-  return bytes;
-}
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -102,15 +79,12 @@ export default function AttachmentsScreen({ route }) {
     const safeName = (file.name ?? `file_${Date.now()}`).replace(/[^\w.\-]/g, '_');
     const path = `${jobId}/${Date.now()}_${safeName}`;
 
-    const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' });
-    const bytes = decodeBase64(base64);
-
-    const contentType = file.mimeType
-      ?? (getExt(file.name) === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+    const response = await fetch(file.uri);
+    const blob = await response.blob();
 
     const { error: upErr } = await supabase.storage
       .from(BUCKET)
-      .upload(path, bytes, { contentType, upsert: false });
+      .upload(path, blob, { upsert: false });
     if (upErr) throw upErr;
 
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
