@@ -28,7 +28,7 @@ function MapPlaceholder({ address }) {
   );
 }
 
-export default function JobOverviewScreen({ route }) {
+export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
   const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
@@ -68,6 +68,24 @@ export default function JobOverviewScreen({ route }) {
     } finally {
       setSavingEdit(false);
     }
+  };
+
+  const handleTripPress = (trip) => {
+    Alert.alert(
+      `Trip ${trip.tripNumber}`,
+      formatTripDate(trip.scheduledAt) || 'No date set',
+      [
+        {
+          text: 'View Notes',
+          onPress: () => navigation.navigate('Notes', { initialTripNumber: trip.tripNumber }),
+        },
+        {
+          text: 'View Attachments',
+          onPress: () => navigation.navigate('Attachments', { initialTripNumber: trip.tripNumber }),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   const handleDeleteTrip = (trip) => {
@@ -340,7 +358,12 @@ export default function JobOverviewScreen({ route }) {
         {trips?.map((trip, idx) => {
           const tInfo = getTripStatus(trip.status);
           return (
-            <View key={trip.id ?? `trip-${idx}`} style={[styles.tripRow, idx < trips.length - 1 && styles.tripBorder]}>
+            <TouchableOpacity
+              key={trip.id ?? `trip-${idx}`}
+              style={[styles.tripRow, idx < trips.length - 1 && styles.tripBorder]}
+              onPress={() => handleTripPress(trip)}
+              activeOpacity={0.7}
+            >
               <View style={styles.tripLeft}>
                 <Text style={styles.tripLabel}>Trip {trip.tripNumber}</Text>
                 <Text style={styles.tripDate}>{formatTripDate(trip.scheduledAt)}</Text>
@@ -363,7 +386,7 @@ export default function JobOverviewScreen({ route }) {
                   </View>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>

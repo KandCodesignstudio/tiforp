@@ -48,7 +48,7 @@ function NoteCard({ note, isOwner, onEdit, onDelete }) {
 }
 
 export default function NotesScreen({ route }) {
-  const { jobId } = route.params;
+  const { jobId, initialTripNumber } = route.params;
   const { user, profile, isAdmin } = useAuth();
   const { jobs, refresh: refreshJobs } = useJobs({ isAdmin, userId: user?.id, channelId: 'notes' });
   const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
@@ -68,7 +68,8 @@ export default function NotesScreen({ route }) {
 
   const trips = job?.trips ?? [];
   const [selectedTrip, setSelectedTrip] = useState(
-    () => trips.find((t) => t.status !== 'completed' && t.status !== 'for_return')?.tripNumber
+    () => initialTripNumber
+      ?? trips.find((t) => t.status !== 'completed' && t.status !== 'for_return')?.tripNumber
       ?? trips[0]?.tripNumber
       ?? 1
   );

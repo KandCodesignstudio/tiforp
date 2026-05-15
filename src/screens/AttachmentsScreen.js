@@ -108,12 +108,14 @@ export default function AttachmentsScreen({ route }) {
     Promise.resolve(refresh()).finally(() => setRefreshing(false));
   };
 
+  const { initialTripNumber } = route.params;
   const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
   const trips = job?.trips ?? [];
   const attachments = job?.attachments ?? [];
 
   const [selectedTrip, setSelectedTrip] = useState(
-    () => trips.find((t) => t.status !== 'completed' && t.status !== 'for_return')?.tripNumber
+    () => initialTripNumber
+      ?? trips.find((t) => t.status !== 'completed' && t.status !== 'for_return')?.tripNumber
       ?? trips[0]?.tripNumber
       ?? 1
   );
