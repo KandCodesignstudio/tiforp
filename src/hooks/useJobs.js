@@ -133,5 +133,57 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       .eq('id', jobId);
   };
 
-  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, refresh: fetchJobs };
+  const updateTrip = async (jobId, tripId, { scheduledAt, scopeOfWork }) => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const updatedTrips = job.trips.map((t) =>
+      t.id === tripId
+        ? { ...t, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null, scopeOfWork: (scopeOfWork ?? '').trim() }
+        : { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt }
+    );
+    const nextTripIso = updatedTrips
+      .filter((t) => t.status === 'scheduled' && t.scheduledAt)
+      .map((t) => t.scheduledAt)
+      .sort()[0] ?? null;
+
+    setJobs((prev) => prev.map((j) =>
+      j.id === jobId
+        ? {
+            ...j,
+            trips: updatedTrips.map((t) => ({ ...t, scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null })),
+            nextTrip: nextTripIso ? new Date(nextTripIso) : null,
+          }
+        : j
+    ));
+
+    await supabase.from('jobs').update({ trips: updatedTrips, next_trip: nextTripIso }).eq('id', jobId);
+  };
+
+  const deleteTrip = async (jobId, tripId) => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const remaining = job.trips
+      .filter((t) => t.id !== tripId)
+      .map((t, idx) => ({ ...t, tripNumber: idx + 1, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt }));
+    const newJobStatus = rollupJobStatus(remaining);
+    const nextTripIso = remaining
+      .filter((t) => t.status === 'scheduled' && t.scheduledAt)
+      .map((t) => t.scheduledAt)
+      .sort()[0] ?? null;
+
+    setJobs((prev) => prev.map((j) =>
+      j.id === jobId
+        ? {
+            ...j,
+            status: newJobStatus,
+            trips: remaining.map((t) => ({ ...t, scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null })),
+            nextTrip: nextTripIso ? new Date(nextTripIso) : null,
+          }
+        : j
+    ));
+
+    await supabase.from('jobs').update({ trips: remaining, status: newJobStatus, next_trip: nextTripIso }).eq('id', jobId);
+  };
+
+  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, refresh: fetchJobs };
 }

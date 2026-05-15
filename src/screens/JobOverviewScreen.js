@@ -31,16 +31,57 @@ function MapPlaceholder({ address }) {
 export default function JobOverviewScreen({ route }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments, addTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState('');
   const [newTripScope, setNewTripScope] = useState('');
   const [savingTrip, setSavingTrip] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingTrip, setEditingTrip] = useState(null);
+  const [editDate, setEditDate] = useState('');
+  const [editScope, setEditScope] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const onRefresh = () => {
     setRefreshing(true);
     Promise.resolve(refresh()).finally(() => setRefreshing(false));
+  };
+
+  const openEditTrip = (trip) => {
+    const d = trip.scheduledAt instanceof Date ? trip.scheduledAt : trip.scheduledAt ? new Date(trip.scheduledAt) : null;
+    const formatted = d
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      : '';
+    setEditingTrip(trip);
+    setEditDate(formatted);
+    setEditScope(trip.scopeOfWork ?? '');
+  };
+
+  const handleEditSave = async () => {
+    if (!editDate.trim()) { Alert.alert('Date required', 'Please enter a scheduled date.'); return; }
+    setSavingEdit(true);
+    try {
+      await updateTrip(job.id, editingTrip.id, { scheduledAt: editDate, scopeOfWork: editScope });
+      setEditingTrip(null);
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteTrip = (trip) => {
+    Alert.alert(
+      `Delete Trip ${trip.tripNumber}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: () => deleteTrip(job.id, trip.id),
+        },
+      ]
+    );
   };
 
   const job = jobs.find((j) => j.id === jobId);
@@ -303,14 +344,69 @@ export default function JobOverviewScreen({ route }) {
               <View style={styles.tripLeft}>
                 <Text style={styles.tripLabel}>Trip {trip.tripNumber}</Text>
                 <Text style={styles.tripDate}>{formatTripDate(trip.scheduledAt)}</Text>
+                {!!trip.scopeOfWork && (
+                  <Text style={styles.tripScope} numberOfLines={2}>{trip.scopeOfWork}</Text>
+                )}
               </View>
-              <View style={[styles.tripStatus, { backgroundColor: tInfo.color + '20' }]}>
-                <Text style={[styles.tripStatusText, { color: tInfo.color }]}>{tInfo.label}</Text>
+              <View style={styles.tripRight}>
+                <View style={[styles.tripStatus, { backgroundColor: tInfo.color + '20' }]}>
+                  <Text style={[styles.tripStatusText, { color: tInfo.color }]}>{tInfo.label}</Text>
+                </View>
+                {isAdmin && (
+                  <View style={styles.tripActions}>
+                    <TouchableOpacity onPress={() => openEditTrip(trip)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteTrip(trip)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="trash-outline" size={16} color={Colors.danger ?? '#e53935'} />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </View>
           );
         })}
       </View>
+
+      {/* Edit trip modal */}
+      <Modal visible={!!editingTrip} transparent animationType="fade" onRequestClose={() => setEditingTrip(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit Trip {editingTrip?.tripNumber}</Text>
+
+            <Text style={styles.modalLabel}>Scheduled Date & Time</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={editDate}
+              onChangeText={setEditDate}
+              placeholder="YYYY-MM-DD HH:MM"
+              placeholderTextColor={Colors.gray}
+            />
+
+            <Text style={styles.modalLabel}>Scope of Work</Text>
+            <TextInput
+              style={[styles.modalInput, { minHeight: 70, textAlignVertical: 'top' }]}
+              value={editScope}
+              onChangeText={setEditScope}
+              placeholder="What needs to be done on this trip?"
+              placeholderTextColor={Colors.gray}
+              multiline
+            />
+
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditingTrip(null)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSaveBtn} disabled={savingEdit} onPress={handleEditSave}>
+                {savingEdit
+                  ? <ActivityIndicator color={Colors.white} />
+                  : <Text style={styles.modalSaveText}>Save Changes</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -393,13 +489,16 @@ const styles = StyleSheet.create({
   contactRole: { fontSize: 12, color: Colors.textLight },
   phoneContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   phone: { fontSize: 13, color: Colors.accent },
-  tripRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  tripRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 10 },
   tripBorder: { borderBottomWidth: 1, borderBottomColor: Colors.lightGray },
-  tripLeft: {},
+  tripLeft: { flex: 1, paddingRight: 12 },
   tripLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
   tripDate: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
+  tripScope: { fontSize: 12, color: Colors.darkGray, marginTop: 4, lineHeight: 16 },
+  tripRight: { alignItems: 'flex-end', gap: 8 },
   tripStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   tripStatusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  tripActions: { flexDirection: 'row', gap: 12 },
   addTripBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 13,
