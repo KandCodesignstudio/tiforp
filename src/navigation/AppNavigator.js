@@ -12,6 +12,7 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import JobsScreen from '../screens/JobsScreen';
 import JobDetailNavigator from './JobDetailNavigator';
 import CreateJobScreen from '../screens/CreateJobScreen';
+import ImportJobsScreen from '../screens/ImportJobsScreen';
 import { Colors } from '../utils/colors';
 
 const Stack = createNativeStackNavigator();
@@ -53,6 +54,11 @@ function MainStack() {
         name="CreateJob"
         component={CreateJobScreen}
         options={{ title: 'Create Job' }}
+      />
+      <Stack.Screen
+        name="ImportJobs"
+        component={ImportJobsScreen}
+        options={{ title: 'Import Jobs (CSV)' }}
       />
     </Stack.Navigator>
   );

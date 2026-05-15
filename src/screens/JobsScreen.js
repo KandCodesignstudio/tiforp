@@ -142,9 +142,14 @@ export default function JobsScreen({ navigation }) {
         <Text style={styles.headerTitle}>JOBS</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {isAdmin && (
-            <TouchableOpacity onPress={() => navigation.navigate('CreateJob')} style={styles.logoutBtn}>
-              <Ionicons name="add-circle-outline" size={26} color={Colors.white} />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity onPress={() => navigation.navigate('ImportJobs')} style={styles.logoutBtn}>
+                <Ionicons name="cloud-upload-outline" size={24} color={Colors.white} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('CreateJob')} style={styles.logoutBtn}>
+                <Ionicons name="add-circle-outline" size={26} color={Colors.white} />
+              </TouchableOpacity>
+            </>
           )}
           <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
             <Ionicons name="log-out-outline" size={24} color={Colors.white} />

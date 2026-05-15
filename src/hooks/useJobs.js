@@ -21,6 +21,7 @@ function transformJob(row) {
     attachments: row.attachments ?? [],
     nextTrip: row.next_trip ? new Date(row.next_trip) : null,
     createdAt: row.created_at ? new Date(row.created_at) : null,
+    metadata: row.metadata ?? {},
   };
 }
 
