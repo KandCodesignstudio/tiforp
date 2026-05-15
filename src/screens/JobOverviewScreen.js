@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotes } from '../hooks/useNotes';
 import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
+import { TabActions } from '@react-navigation/native';
 
 function MapPlaceholder({ address }) {
   const encodedAddress = encodeURIComponent(address || '');
@@ -79,11 +80,11 @@ export default function JobOverviewScreen({ route, navigation }) {
       [
         {
           text: 'View Notes',
-          onPress: () => navigation.jumpTo('Notes', { initialTripNumber: trip.tripNumber }),
+          onPress: () => navigation.dispatch(TabActions.jumpTo('Notes', { initialTripNumber: trip.tripNumber })),
         },
         {
           text: 'View Attachments',
-          onPress: () => navigation.jumpTo('Attachments', { initialTripNumber: trip.tripNumber }),
+          onPress: () => navigation.dispatch(TabActions.jumpTo('Attachments', { initialTripNumber: trip.tripNumber })),
         },
         { text: 'Cancel', style: 'cancel' },
       ]

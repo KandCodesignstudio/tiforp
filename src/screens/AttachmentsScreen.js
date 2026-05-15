@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions, ScrollView, RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -120,9 +121,12 @@ export default function AttachmentsScreen({ route }) {
       ?? 1
   );
 
-  useEffect(() => {
-    if (initialTripNumber) setSelectedTrip(initialTripNumber);
-  }, [initialTripNumber]);
+  useFocusEffect(
+    useCallback(() => {
+      const n = route.params?.initialTripNumber;
+      if (n) setSelectedTrip(n);
+    }, [route.params?.initialTripNumber])
+  );
 
   const filteredAttachments = attachments.filter(
     (a) => (a.tripNumber ?? 1) === selectedTrip

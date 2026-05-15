@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, Alert,
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Modal, RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotes } from '../hooks/useNotes';
@@ -74,9 +75,12 @@ export default function NotesScreen({ route }) {
       ?? 1
   );
 
-  useEffect(() => {
-    if (initialTripNumber) setSelectedTrip(initialTripNumber);
-  }, [initialTripNumber]);
+  useFocusEffect(
+    useCallback(() => {
+      const n = route.params?.initialTripNumber;
+      if (n) setSelectedTrip(n);
+    }, [route.params?.initialTripNumber])
+  );
   const filteredNotes = notes.filter((n) => n.tripNumber === selectedTrip);
 
   const handleSend = async () => {
