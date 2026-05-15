@@ -77,11 +77,11 @@ export default function JobOverviewScreen({ route, navigation }) {
       [
         {
           text: 'View Notes',
-          onPress: () => navigation.navigate('Notes', { initialTripNumber: trip.tripNumber }),
+          onPress: () => navigation.jumpTo('Notes', { initialTripNumber: trip.tripNumber }),
         },
         {
           text: 'View Attachments',
-          onPress: () => navigation.navigate('Attachments', { initialTripNumber: trip.tripNumber }),
+          onPress: () => navigation.jumpTo('Attachments', { initialTripNumber: trip.tripNumber }),
         },
         { text: 'Cancel', style: 'cancel' },
       ]

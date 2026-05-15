@@ -73,6 +73,10 @@ export default function NotesScreen({ route }) {
       ?? trips[0]?.tripNumber
       ?? 1
   );
+
+  useEffect(() => {
+    if (initialTripNumber) setSelectedTrip(initialTripNumber);
+  }, [initialTripNumber]);
   const filteredNotes = notes.filter((n) => n.tripNumber === selectedTrip);
 
   const handleSend = async () => {

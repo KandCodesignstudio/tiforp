@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions, ScrollView, RefreshControl,
@@ -119,6 +119,10 @@ export default function AttachmentsScreen({ route }) {
       ?? trips[0]?.tripNumber
       ?? 1
   );
+
+  useEffect(() => {
+    if (initialTripNumber) setSelectedTrip(initialTripNumber);
+  }, [initialTripNumber]);
 
   const filteredAttachments = attachments.filter(
     (a) => (a.tripNumber ?? 1) === selectedTrip
