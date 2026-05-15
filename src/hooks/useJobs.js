@@ -57,10 +57,25 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default' 
       t.id === tripId ? { ...t, status: newStatus, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt } : { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt }
     );
     const newJobStatus = rollupJobStatus(updatedTrips);
+
+    // Optimistic update
+    setJobs((prev) => prev.map((j) =>
+      j.id === jobId
+        ? { ...j, status: newJobStatus, trips: updatedTrips.map((t) => ({ ...t, scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null })) }
+        : j
+    ));
+
     await supabase.from('jobs').update({ trips: updatedTrips, status: newJobStatus }).eq('id', jobId);
   };
 
   const updatePayments = async (jobId, { clientPaid, techPaid }) => {
+    // Optimistic update
+    setJobs((prev) => prev.map((j) =>
+      j.id === jobId
+        ? { ...j, ...(clientPaid !== undefined && { clientPaid }), ...(techPaid !== undefined && { techPaid }) }
+        : j
+    ));
+
     const payload = {};
     if (clientPaid !== undefined) payload.client_paid = clientPaid;
     if (techPaid !== undefined) payload.tech_paid = techPaid;

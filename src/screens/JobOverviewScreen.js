@@ -115,7 +115,7 @@ export default function JobOverviewScreen({ route }) {
 
           {getTripStatus(activeTrip.status).next && (
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: getTripStatus(activeTrip.status).color }]}
+              style={[styles.actionBtn, { backgroundColor: Colors.accent }]}
               onPress={() => handleAdvanceStatus(activeTrip)}
             >
               <Text style={styles.actionBtnText}>{getTripStatus(activeTrip.status).nextLabel}</Text>

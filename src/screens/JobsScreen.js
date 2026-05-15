@@ -155,6 +155,7 @@ export default function JobsScreen({ navigation }) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
         contentContainerStyle={styles.filterRow}
       >
         {visibleFilters.map((f) => {
@@ -260,11 +261,15 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   emptyText: { textAlign: 'center', color: Colors.gray, marginTop: 40, fontSize: 15 },
+  filterScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   filterRow: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 4,
-    gap: 8,
+    alignItems: 'center',
   },
   filterChip: {
     paddingHorizontal: 14,
