@@ -1,24 +1,24 @@
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { Colors } from '../utils/colors';
 import { supabase } from '../config/supabase';
 import { notifyAdmins } from '../utils/notifications';
 import { useAuth } from '../context/AuthContext';
+import { useJobs } from '../hooks/useJobs';
+
+const BUCKET = 'attachments';
 
 const FILE_ICONS = {
   pdf: 'document-text',
-  jpg: 'image',
-  jpeg: 'image',
-  png: 'image',
-  doc: 'document',
-  docx: 'document',
-  xls: 'grid',
-  xlsx: 'grid',
+  jpg: 'image', jpeg: 'image', png: 'image', heic: 'image',
+  doc: 'document', docx: 'document',
+  xls: 'grid', xlsx: 'grid',
   default: 'attach',
 };
 
@@ -33,12 +33,12 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function AttachmentRow({ item, onDelete }) {
+function AttachmentRow({ item, onDelete, onOpen }) {
   const ext = getExt(item.name);
   const icon = FILE_ICONS[ext] ?? FILE_ICONS.default;
 
   return (
-    <View style={styles.row}>
+    <TouchableOpacity style={styles.row} onPress={() => onOpen(item)} activeOpacity={0.7}>
       <View style={styles.iconWrap}>
         <Ionicons name={icon} size={22} color={Colors.accent} />
       </View>
@@ -51,29 +51,69 @@ function AttachmentRow({ item, onDelete }) {
       <TouchableOpacity onPress={() => onDelete(item.id)} style={styles.deleteBtn}>
         <Ionicons name="trash-outline" size={18} color={Colors.danger} />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 
+function decodeBase64(b64) {
+  const binary = global.atob ? global.atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 export default function AttachmentsScreen({ route }) {
-  const { job } = route.params;
-  const { profile, isAdmin } = useAuth();
-  const [attachments, setAttachments] = useState(job.attachments ?? []);
+  const { jobId } = route.params;
+  const { user, profile, isAdmin } = useAuth();
+  const { jobs, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'attachments' });
   const [uploading, setUploading] = useState(false);
 
+  const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
+  const attachments = job?.attachments ?? [];
+
   const addAttachment = async (file) => {
-    const newAttachment = { id: Date.now().toString(), name: file.name, size: file.size, uri: file.uri };
-    setAttachments((prev) => [...prev, newAttachment]);
+    const safeName = (file.name ?? `file_${Date.now()}`).replace(/[^\w.\-]/g, '_');
+    const path = `${jobId}/${Date.now()}_${safeName}`;
+
+    const base64 = await FileSystem.readAsStringAsync(file.uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const bytes = decodeBase64(base64);
+
+    const contentType = file.mimeType
+      ?? (getExt(file.name) === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+
+    const { error: upErr } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, bytes, { contentType, upsert: false });
+    if (upErr) throw upErr;
+
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+    const newAttachment = {
+      id: Date.now().toString(),
+      name: file.name,
+      size: file.size,
+      path,
+      url: pub.publicUrl,
+    };
 
     const updatedAttachments = [...attachments, newAttachment];
-    await supabase.from('jobs').update({ attachments: updatedAttachments }).eq('id', job.id);
+    const { error: updErr } = await supabase
+      .from('jobs')
+      .update({ attachments: updatedAttachments })
+      .eq('id', jobId);
+    if (updErr) throw updErr;
+
+    refresh();
 
     if (!isAdmin) {
       const techName = profile?.full_name ?? 'Technician';
       notifyAdmins(
         'New Attachment Uploaded',
-        `${techName} uploaded "${file.name}" on job ${job.jobNumber ?? job.id}`,
-        { jobId: job.id }
+        `${techName} uploaded "${file.name}" on job ${job?.jobNumber ?? jobId}`,
+        { jobId }
       ).catch(() => {});
     }
   };
@@ -84,10 +124,10 @@ export default function AttachmentsScreen({ route }) {
       if (!result.canceled && result.assets?.[0]) {
         setUploading(true);
         await addAttachment(result.assets[0]);
-        setUploading(false);
       }
-    } catch {
-      Alert.alert('Error', 'Could not pick document.');
+    } catch (err) {
+      Alert.alert('Upload Error', err.message ?? 'Could not upload file.');
+    } finally {
       setUploading(false);
     }
   };
@@ -107,19 +147,45 @@ export default function AttachmentsScreen({ route }) {
         setUploading(true);
         const asset = result.assets[0];
         const name = asset.uri.split('/').pop() ?? `photo_${Date.now()}.jpg`;
-        await addAttachment({ name, size: asset.fileSize, uri: asset.uri });
-        setUploading(false);
+        await addAttachment({
+          name,
+          size: asset.fileSize,
+          uri: asset.uri,
+          mimeType: asset.mimeType ?? 'image/jpeg',
+        });
       }
-    } catch {
-      Alert.alert('Error', 'Could not pick photo.');
+    } catch (err) {
+      Alert.alert('Upload Error', err.message ?? 'Could not upload photo.');
+    } finally {
       setUploading(false);
     }
   };
 
+  const openAttachment = (item) => {
+    if (item.url) Linking.openURL(item.url);
+    else Alert.alert('Unavailable', 'This attachment has no remote URL.');
+  };
+
   const deleteAttachment = (id) => {
+    const target = attachments.find((a) => a.id === id);
     Alert.alert('Remove Attachment', 'Remove this file?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => setAttachments((p) => p.filter((a) => a.id !== id)) },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            if (target?.path) {
+              await supabase.storage.from(BUCKET).remove([target.path]);
+            }
+            const updated = attachments.filter((a) => a.id !== id);
+            await supabase.from('jobs').update({ attachments: updated }).eq('id', jobId);
+            refresh();
+          } catch (err) {
+            Alert.alert('Error', err.message);
+          }
+        },
+      },
     ]);
   };
 
@@ -138,7 +204,7 @@ export default function AttachmentsScreen({ route }) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <AttachmentRow item={item} onDelete={deleteAttachment} />
+          <AttachmentRow item={item} onDelete={deleteAttachment} onOpen={openAttachment} />
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
