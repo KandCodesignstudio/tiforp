@@ -11,6 +11,7 @@ import SignupScreen from '../screens/SignupScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import JobsScreen from '../screens/JobsScreen';
 import JobDetailNavigator from './JobDetailNavigator';
+import CreateJobScreen from '../screens/CreateJobScreen';
 import { Colors } from '../utils/colors';
 
 const Stack = createNativeStackNavigator();
@@ -47,6 +48,11 @@ function MainStack() {
             </TouchableOpacity>
           ),
         })}
+      />
+      <Stack.Screen
+        name="CreateJob"
+        component={CreateJobScreen}
+        options={{ title: 'Create Job' }}
       />
     </Stack.Navigator>
   );

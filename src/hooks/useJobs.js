@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
-import { MOCK_JOBS } from '../config/mockData';
-
-const USE_MOCK = true; // Set to false after configuring Supabase
 
 function transformJob(row) {
   return {
     id: row.id,
     jobNumber: row.job_number,
     status: row.status,
+    technicianId: row.technician_id,
     client: row.client ?? {},
     description: row.description,
     trips: (row.trips ?? []).map((t) => ({
@@ -21,46 +19,33 @@ function transformJob(row) {
   };
 }
 
-export function useJobs() {
+export function useJobs({ isAdmin = false, userId = null } = {}) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (USE_MOCK) {
-      setJobs(MOCK_JOBS);
+  const fetchJobs = () => {
+    let query = supabase.from('jobs').select('*').order('created_at', { ascending: false });
+    if (!isAdmin && userId) query = query.eq('technician_id', userId);
+    query.then(({ data, error }) => {
+      if (!error) setJobs((data ?? []).map(transformJob));
       setLoading(false);
-      return;
-    }
+    });
+  };
 
-    // Initial fetch
-    supabase
-      .from('jobs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!error) setJobs((data ?? []).map(transformJob));
-        setLoading(false);
-      });
+  useEffect(() => {
+    fetchJobs();
 
-    // Real-time subscription
     const channel = supabase
       .channel('jobs-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
-        supabase
-          .from('jobs')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .then(({ data }) => setJobs((data ?? []).map(transformJob)));
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, fetchJobs)
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, []);
+  }, [isAdmin, userId]);
 
   const updateJobStatus = async (jobId, status) => {
-    if (USE_MOCK) return;
     await supabase.from('jobs').update({ status }).eq('id', jobId);
   };
 
-  return { jobs, loading, updateJobStatus };
+  return { jobs, loading, updateJobStatus, refresh: fetchJobs };
 }

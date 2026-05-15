@@ -56,8 +56,8 @@ function JobCard({ job, onPress }) {
 }
 
 export default function JobsScreen({ navigation }) {
-  const { logout, user } = useAuth();
-  const { jobs, loading } = useJobs();
+  const { logout, user, isAdmin } = useAuth();
+  const { jobs, loading, refresh } = useJobs({ isAdmin, userId: user?.id });
   const [refreshing, setRefreshing] = useState(false);
 
   const inProgress = jobs.filter((j) => j.status === 'in_progress');
@@ -65,7 +65,7 @@ export default function JobsScreen({ navigation }) {
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    refresh().finally(() => setRefreshing(false));
   };
 
   const sections = [
@@ -96,9 +96,16 @@ export default function JobsScreen({ navigation }) {
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>JOBS</Text>
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-          <Ionicons name="log-out-outline" size={24} color={Colors.white} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {isAdmin && (
+            <TouchableOpacity onPress={() => navigation.navigate('CreateJob')} style={styles.logoutBtn}>
+              <Ionicons name="add-circle-outline" size={26} color={Colors.white} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+            <Ionicons name="log-out-outline" size={24} color={Colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
