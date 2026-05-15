@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch, ActivityIndicator,
   Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +13,7 @@ import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 import { TabActions } from '@react-navigation/native';
 
 function MapWithPin({ address }) {
-  const [region, setRegion] = useState(null);
+  const [coords, setCoords] = useState(null);
   const [failed, setFailed] = useState(false);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || '')}`;
 
@@ -26,12 +26,7 @@ function MapWithPin({ address }) {
       .then((r) => r.json())
       .then((data) => {
         if (data?.[0]) {
-          setRegion({
-            latitude: parseFloat(data[0].lat),
-            longitude: parseFloat(data[0].lon),
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          });
+          setCoords({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) });
         } else {
           setFailed(true);
         }
@@ -49,7 +44,7 @@ function MapWithPin({ address }) {
     );
   }
 
-  if (!region) {
+  if (!coords) {
     return (
       <View style={styles.mapLoading}>
         <ActivityIndicator color={Colors.accent} />
@@ -57,19 +52,14 @@ function MapWithPin({ address }) {
     );
   }
 
+  const staticUrl =
+    `https://staticmap.openstreetmap.de/staticmap.php` +
+    `?center=${coords.lat},${coords.lon}&zoom=15&size=600x300` +
+    `&markers=${coords.lat},${coords.lon},ol-marker`;
+
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={() => Linking.openURL(mapsUrl)} style={styles.mapContainer}>
-      <MapView
-        style={styles.map}
-        region={region}
-        scrollEnabled={false}
-        zoomEnabled={false}
-        pitchEnabled={false}
-        rotateEnabled={false}
-        pointerEvents="none"
-      >
-        <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }} />
-      </MapView>
+      <Image source={{ uri: staticUrl }} style={styles.map} resizeMode="cover" />
       <View style={styles.mapOpenBtn}>
         <Ionicons name="navigate-outline" size={13} color={Colors.white} />
         <Text style={styles.mapOpenBtnText}>Open in Maps</Text>
