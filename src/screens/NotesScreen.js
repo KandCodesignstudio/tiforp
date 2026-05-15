@@ -67,7 +67,7 @@ export default function NotesScreen({ route }) {
       keyboardVerticalOffset={90}
     >
       <View style={styles.container}>
-        {trips.length > 1 && (
+        {trips.length > 0 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
