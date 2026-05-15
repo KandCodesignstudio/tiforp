@@ -13,6 +13,7 @@ import JobsScreen from '../screens/JobsScreen';
 import JobDetailNavigator from './JobDetailNavigator';
 import CreateJobScreen from '../screens/CreateJobScreen';
 import ImportJobsScreen from '../screens/ImportJobsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import { Colors } from '../utils/colors';
 
 const Stack = createNativeStackNavigator();
@@ -59,6 +60,11 @@ function MainStack() {
         name="ImportJobs"
         component={ImportJobsScreen}
         options={{ title: 'Import Jobs (CSV)' }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
       />
     </Stack.Navigator>
   );

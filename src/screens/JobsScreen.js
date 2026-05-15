@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
+import { useNotificationInbox } from '../hooks/useNotificationInbox';
 import { Colors } from '../utils/colors';
 import { getJobStatus } from '../utils/status';
 import { getRandomMessage } from '../utils/motivationalMessages';
@@ -82,6 +83,7 @@ const FILTERS = [
 export default function JobsScreen({ navigation }) {
   const { logout, user, profile, isAdmin } = useAuth();
   const { jobs, loading, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'list' });
+  const { unreadCount } = useNotificationInbox(user?.id);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
 
@@ -155,6 +157,17 @@ export default function JobsScreen({ navigation }) {
               </TouchableOpacity>
             </>
           )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications')}
+            style={styles.logoutBtn}
+          >
+            <Ionicons name="notifications-outline" size={24} color={Colors.white} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
             <Ionicons name="log-out-outline" size={24} color={Colors.white} />
           </TouchableOpacity>
@@ -226,6 +239,19 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   logoutBtn: { padding: 4 },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: Colors.danger ?? '#e53935',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { color: Colors.white, fontSize: 10, fontWeight: '800' },
   loader: { flex: 1, marginTop: 40 },
   list: { paddingHorizontal: 16, paddingBottom: 24 },
   sectionHeader: {

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotes } from '../hooks/useNotes';
+import { notifyAdmins } from '../utils/notifications';
 import { Colors } from '../utils/colors';
 
 function timeAgo(date) {
@@ -80,6 +81,15 @@ export default function NotesScreen({ route }) {
     setText('');
     await addNote(jobId, trimmed, author, selectedTrip, user?.id);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+
+    if (!isAdmin) {
+      const preview = trimmed.length > 80 ? `${trimmed.slice(0, 77)}...` : trimmed;
+      notifyAdmins(
+        'New Note',
+        `${author} on Trip ${selectedTrip} of job ${job?.jobNumber ?? jobId}: "${preview}"`,
+        { jobId }
+      ).catch(() => {});
+    }
   };
 
   const handleEdit = (note) => {
