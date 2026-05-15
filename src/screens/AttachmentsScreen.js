@@ -55,11 +55,28 @@ function AttachmentRow({ item, onDelete, onOpen }) {
   );
 }
 
+const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
 function decodeBase64(b64) {
-  const binary = global.atob ? global.atob(b64) : Buffer.from(b64, 'base64').toString('binary');
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, '');
+  const len = clean.length;
+  let pad = 0;
+  if (clean[len - 1] === '=') pad++;
+  if (clean[len - 2] === '=') pad++;
+
+  const bufferLength = (len * 3) / 4 - pad;
+  const bytes = new Uint8Array(bufferLength);
+
+  let p = 0;
+  for (let i = 0; i < len; i += 4) {
+    const e1 = BASE64_CHARS.indexOf(clean[i]);
+    const e2 = BASE64_CHARS.indexOf(clean[i + 1]);
+    const e3 = BASE64_CHARS.indexOf(clean[i + 2]);
+    const e4 = BASE64_CHARS.indexOf(clean[i + 3]);
+    if (p < bufferLength) bytes[p++] = (e1 << 2) | (e2 >> 4);
+    if (p < bufferLength) bytes[p++] = ((e2 & 15) << 4) | (e3 >> 2);
+    if (p < bufferLength) bytes[p++] = ((e3 & 3) << 6) | (e4 & 63);
+  }
   return bytes;
 }
 
