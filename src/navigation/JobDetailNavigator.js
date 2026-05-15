@@ -29,7 +29,7 @@ function TabLabel({ label, focused }) {
 }
 
 export default function JobDetailNavigator({ route }) {
-  const { job } = route.params;
+  const { jobId, job } = route.params;
 
   return (
     <Tab.Navigator
@@ -45,7 +45,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Overview"
         component={JobOverviewScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId, job }}
         options={{
           tabBarLabel: 'OVERVIEW',
           tabBarIcon: ({ focused }) => <TabIcon name="information-circle-outline" focused={focused} />,
@@ -54,7 +54,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Instructions"
         component={InstructionsScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId, job }}
         options={{
           tabBarLabel: 'INSTRUCTIONS',
           tabBarIcon: ({ focused }) => <TabIcon name="document-text-outline" focused={focused} />,
@@ -63,7 +63,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Attachments"
         component={AttachmentsScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId, job }}
         options={{
           tabBarLabel: 'ATTACHMENTS',
           tabBarIcon: ({ focused }) => <TabIcon name="attach-outline" focused={focused} />,
@@ -72,7 +72,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Notes"
         component={NotesScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId, job }}
         options={{
           tabBarLabel: 'NOTES',
           tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-outline" focused={focused} />,

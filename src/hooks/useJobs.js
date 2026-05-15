@@ -22,7 +22,7 @@ function transformJob(row) {
   };
 }
 
-export function useJobs({ isAdmin = false, userId = null } = {}) {
+export function useJobs({ isAdmin = false, userId = null, channelId = 'default' } = {}) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +39,7 @@ export function useJobs({ isAdmin = false, userId = null } = {}) {
     fetchJobs();
 
     const channel = supabase
-      .channel('jobs-changes')
+      .channel(`jobs-changes-${channelId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, fetchJobs)
       .subscribe();
 

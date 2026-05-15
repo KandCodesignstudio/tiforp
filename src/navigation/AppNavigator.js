@@ -41,7 +41,7 @@ function MainStack() {
         name="JobDetail"
         component={JobDetailNavigator}
         options={({ route, navigation }) => ({
-          title: route.params?.job?.client?.name ?? 'Job Detail',
+          title: 'Job Detail',
           headerLeft: () => (
             <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 8 }}>
               <Ionicons name="chevron-back" size={24} color={Colors.white} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
@@ -28,12 +28,20 @@ function MapPlaceholder({ address }) {
 }
 
 export default function JobOverviewScreen({ route }) {
-  const initialJob = route.params.job;
+  const { jobId } = route.params;
   const { user, isAdmin } = useAuth();
-  const { jobs, updateTripStatus, updatePayments } = useJobs({ isAdmin, userId: user?.id });
+  const { jobs, updateTripStatus, updatePayments } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail' });
 
-  // Always use the latest live version of the job from the hook
-  const job = jobs.find((j) => j.id === initialJob.id) ?? initialJob;
+  const job = jobs.find((j) => j.id === jobId);
+
+  if (!job) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
+
   const { client, jobNumber, status, description, trips, clientPaid, techPaid } = job;
 
   const jobStatusInfo = getJobStatus(status);

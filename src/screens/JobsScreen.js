@@ -80,7 +80,7 @@ const FILTERS = [
 
 export default function JobsScreen({ navigation }) {
   const { logout, user, isAdmin } = useAuth();
-  const { jobs, loading, refresh } = useJobs({ isAdmin, userId: user?.id });
+  const { jobs, loading, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'list' });
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
 
@@ -119,7 +119,18 @@ export default function JobsScreen({ navigation }) {
       <JobCard
         job={item}
         showPayment={isAdmin}
-        onPress={() => navigation.navigate('JobDetail', { job: item })}
+        onPress={() => navigation.navigate('JobDetail', {
+          jobId: item.id,
+          job: {
+            ...item,
+            nextTrip: item.nextTrip?.toISOString?.() ?? null,
+            createdAt: item.createdAt?.toISOString?.() ?? null,
+            trips: item.trips?.map(t => ({
+              ...t,
+              scheduledAt: t.scheduledAt?.toISOString?.() ?? null,
+            })) ?? [],
+          },
+        })}
       />
     );
   };
