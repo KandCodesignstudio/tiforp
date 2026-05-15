@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
+import { useNotes } from '../hooks/useNotes';
 import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 
 function MapPlaceholder({ address }) {
@@ -32,6 +33,7 @@ export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
   const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { notes } = useNotes(jobId);
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState('');
   const [newTripScope, setNewTripScope] = useState('');
@@ -139,6 +141,24 @@ export default function JobOverviewScreen({ route, navigation }) {
 
     // Tech at checked_out → submit for approval or for return
     if (trip.status === 'checked_out' && !isAdmin) {
+      const tripNotes = notes.filter((n) => n.tripNumber === trip.tripNumber);
+      const tripAttachments = (job.attachments ?? []).filter((a) => (a.tripNumber ?? 1) === trip.tripNumber);
+      const hasNotes = tripNotes.length > 0;
+      const hasAttachments = tripAttachments.length > 0;
+
+      if (!hasNotes || !hasAttachments) {
+        const missing = [
+          !hasNotes && 'notes',
+          !hasAttachments && 'photos/files',
+        ].filter(Boolean).join(' and ');
+        Alert.alert(
+          'Not Ready Yet',
+          `Please add ${missing} for this trip before submitting for approval.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       Alert.alert(
         'Finish Trip',
         'How is this trip ending?',
