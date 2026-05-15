@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch, ActivityIndicator,
   Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
 import { useAuth } from '../context/AuthContext';
@@ -11,21 +12,68 @@ import { useNotes } from '../hooks/useNotes';
 import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 import { TabActions } from '@react-navigation/native';
 
-function MapPlaceholder({ address }) {
-  const encodedAddress = encodeURIComponent(address || '');
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+function MapWithPin({ address }) {
+  const [region, setRegion] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address || '')}`;
+
+  useEffect(() => {
+    if (!address) return;
+    fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+      { headers: { 'User-Agent': 'ITforPApp/1.0' } }
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.[0]) {
+          setRegion({
+            latitude: parseFloat(data[0].lat),
+            longitude: parseFloat(data[0].lon),
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          });
+        } else {
+          setFailed(true);
+        }
+      })
+      .catch(() => setFailed(true));
+  }, [address]);
+
+  if (failed) {
+    return (
+      <TouchableOpacity style={styles.mapFallback} onPress={() => Linking.openURL(mapsUrl)} activeOpacity={0.8}>
+        <Ionicons name="map-outline" size={32} color={Colors.accent} />
+        <Text style={styles.mapFallbackText}>Tap to open in Maps</Text>
+        <Text style={styles.mapFallbackAddr} numberOfLines={1}>{address}</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  if (!region) {
+    return (
+      <View style={styles.mapLoading}>
+        <ActivityIndicator color={Colors.accent} />
+      </View>
+    );
+  }
 
   return (
-    <TouchableOpacity
-      style={styles.mapPlaceholder}
-      onPress={() => Linking.openURL(mapsUrl)}
-      activeOpacity={0.8}
-    >
-      <View style={styles.mapIconContainer}>
-        <Ionicons name="map" size={40} color={Colors.accent} />
+    <TouchableOpacity activeOpacity={0.9} onPress={() => Linking.openURL(mapsUrl)} style={styles.mapContainer}>
+      <MapView
+        style={styles.map}
+        region={region}
+        scrollEnabled={false}
+        zoomEnabled={false}
+        pitchEnabled={false}
+        rotateEnabled={false}
+        pointerEvents="none"
+      >
+        <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }} />
+      </MapView>
+      <View style={styles.mapOpenBtn}>
+        <Ionicons name="navigate-outline" size={13} color={Colors.white} />
+        <Text style={styles.mapOpenBtnText}>Open in Maps</Text>
       </View>
-      <Text style={styles.mapLabel}>Tap to open in Maps</Text>
-      <Text style={styles.mapAddress} numberOfLines={2}>{address}</Text>
     </TouchableOpacity>
   );
 }
@@ -190,7 +238,7 @@ export default function JobOverviewScreen({ route, navigation }) {
         <Text style={[styles.jobStatusBannerText, { color: jobStatusInfo.color }]}>{jobStatusInfo.label}</Text>
       </View>
 
-      <MapPlaceholder address={client?.address} />
+      <MapWithPin address={client?.address} />
 
       <View style={styles.card}>
         <Text style={styles.clientName}>{client?.name}</Text>
@@ -511,25 +559,25 @@ const styles = StyleSheet.create({
   },
   jobNumberBanner: { fontSize: 14, fontWeight: '700', color: Colors.text },
   jobStatusBannerText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  mapPlaceholder: {
-    height: 160,
-    backgroundColor: Colors.lightGray,
-    borderRadius: 12,
-    marginBottom: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
-    overflow: 'hidden',
+  mapContainer: { height: 180, borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
+  map: { ...StyleSheet.absoluteFillObject },
+  mapOpenBtn: {
+    position: 'absolute', bottom: 10, right: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: Colors.primary, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 5,
   },
-  mapIconContainer: {
-    width: 72, height: 72, backgroundColor: Colors.white, borderRadius: 36,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12, shadowRadius: 4, elevation: 3, marginBottom: 8,
+  mapOpenBtnText: { color: Colors.white, fontSize: 11, fontWeight: '700' },
+  mapLoading: {
+    height: 180, borderRadius: 12, marginBottom: 12,
+    backgroundColor: Colors.lightGray, alignItems: 'center', justifyContent: 'center',
   },
-  mapLabel: { fontSize: 13, color: Colors.accent, fontWeight: '600' },
-  mapAddress: { fontSize: 11, color: Colors.textLight, marginTop: 4, paddingHorizontal: 20, textAlign: 'center' },
+  mapFallback: {
+    height: 180, borderRadius: 12, marginBottom: 12,
+    backgroundColor: Colors.lightGray, alignItems: 'center', justifyContent: 'center',
+  },
+  mapFallbackText: { fontSize: 13, color: Colors.accent, fontWeight: '600', marginTop: 8 },
+  mapFallbackAddr: { fontSize: 11, color: Colors.textLight, marginTop: 4, paddingHorizontal: 20 },
   card: {
     backgroundColor: Colors.white, borderRadius: 12, padding: 16, marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
