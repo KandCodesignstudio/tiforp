@@ -1,10 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, Alert,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Modal, RefreshControl,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Modal, RefreshControl, BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { TabActions } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotes } from '../hooks/useNotes';
@@ -48,8 +49,9 @@ function NoteCard({ note, isOwner, onEdit, onDelete }) {
   );
 }
 
-export default function NotesScreen({ route }) {
+export default function NotesScreen({ route, navigation }) {
   const { jobId, initialTripNumber } = route.params;
+  const cameFromTrip = !!route.params?.initialTripNumber;
   const { user, profile, isAdmin } = useAuth();
   const { jobs, refresh: refreshJobs } = useJobs({ isAdmin, userId: user?.id, channelId: 'notes' });
   const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
@@ -79,6 +81,16 @@ export default function NotesScreen({ route }) {
     useCallback(() => {
       const n = route.params?.initialTripNumber;
       if (n) setSelectedTrip(n);
+
+      // Intercept Android hardware back — go to Overview tab, not Jobs list
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (route.params?.initialTripNumber) {
+          navigation.dispatch(TabActions.jumpTo('Overview'));
+          return true;
+        }
+        return false;
+      });
+      return () => sub.remove();
     }, [route.params?.initialTripNumber])
   );
   const filteredNotes = notes.filter((n) => n.tripNumber === selectedTrip);
@@ -132,6 +144,15 @@ export default function NotesScreen({ route }) {
       keyboardVerticalOffset={90}
     >
       <View style={styles.container}>
+        {cameFromTrip && (
+          <TouchableOpacity
+            style={styles.backBar}
+            onPress={() => navigation.dispatch(TabActions.jumpTo('Overview'))}
+          >
+            <Ionicons name="chevron-back" size={16} color={Colors.primary} />
+            <Text style={styles.backBarText}>Back to Overview</Text>
+          </TouchableOpacity>
+        )}
         {trips.length > 0 && (
           <ScrollView
             horizontal
@@ -222,6 +243,14 @@ export default function NotesScreen({ route }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.screenBg },
+  backBar: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: Colors.lightGray,
+    gap: 4,
+  },
+  backBarText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
   tabs: { backgroundColor: Colors.primary, maxHeight: 48 },
   tabsContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   tab: {

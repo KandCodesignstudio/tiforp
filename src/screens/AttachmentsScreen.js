@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions, ScrollView, RefreshControl,
+  ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions, ScrollView, RefreshControl, BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, TabActions } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -96,8 +96,9 @@ function base64ToArrayBuffer(b64) {
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-export default function AttachmentsScreen({ route }) {
+export default function AttachmentsScreen({ route, navigation }) {
   const { jobId } = route.params;
+  const cameFromTrip = !!route.params?.initialTripNumber;
   const { user, profile, isAdmin } = useAuth();
   const { jobs, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'attachments' });
   const [uploading, setUploading] = useState(false);
@@ -125,6 +126,15 @@ export default function AttachmentsScreen({ route }) {
     useCallback(() => {
       const n = route.params?.initialTripNumber;
       if (n) setSelectedTrip(n);
+
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (route.params?.initialTripNumber) {
+          navigation.dispatch(TabActions.jumpTo('Overview'));
+          return true;
+        }
+        return false;
+      });
+      return () => sub.remove();
     }, [route.params?.initialTripNumber])
   );
 
@@ -245,6 +255,15 @@ export default function AttachmentsScreen({ route }) {
 
   return (
     <View style={styles.container}>
+      {cameFromTrip && (
+        <TouchableOpacity
+          style={styles.backBar}
+          onPress={() => navigation.dispatch(TabActions.jumpTo('Overview'))}
+        >
+          <Ionicons name="chevron-back" size={16} color={Colors.primary} />
+          <Text style={styles.backBarText}>Back to Overview</Text>
+        </TouchableOpacity>
+      )}
       {trips.length > 0 && (
         <ScrollView
           horizontal
@@ -315,6 +334,14 @@ export default function AttachmentsScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.screenBg },
+  backBar: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: Colors.lightGray,
+    gap: 4,
+  },
+  backBarText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
   tabs: { backgroundColor: Colors.primary, maxHeight: 48 },
   tabsContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   tab: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)' },
