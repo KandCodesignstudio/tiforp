@@ -171,6 +171,7 @@ export default function JobOverviewScreen({ route, navigation }) {
   const activeTrip = [...(trips ?? [])].reverse().find((t) => t.status !== 'completed' && t.status !== 'for_return')
     ?? trips?.[trips.length - 1];
   const pendingTrips = trips?.filter((t) => t.status === 'pending_approval') ?? [];
+  const lastTripCompleted = trips?.length > 0 && trips[trips.length - 1].status === 'completed';
 
   const callPhone = (phone) => Linking.openURL(`tel:${phone}`);
 
@@ -423,12 +424,16 @@ export default function JobOverviewScreen({ route, navigation }) {
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.toggleLabel}>Tech Paid</Text>
-              <Text style={styles.toggleSub}>Technician paid for this job</Text>
+              <Text style={styles.toggleSub}>
+                {lastTripCompleted ? 'Technician paid for this job' : 'Available once last trip is completed'}
+              </Text>
             </View>
             <Switch
               value={!!techPaid}
               onValueChange={(v) => updatePayments(job.id, { techPaid: v })}
               trackColor={{ false: Colors.lightGray, true: Colors.completed }}
+              disabled={!lastTripCompleted}
+              style={{ opacity: lastTripCompleted ? 1 : 0.4 }}
             />
           </View>
         </View>
