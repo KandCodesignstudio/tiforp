@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
 import { rollupJobStatus, getTripStatus } from '../utils/status';
-import { notifyAdmins } from '../utils/notifications';
+import { notifyAdmins, notifyUser } from '../utils/notifications';
 
 function transformJob(row) {
   return {
@@ -73,9 +73,20 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     if (!isAdmin) {
       const statusLabel = getTripStatus(newStatus).label;
       const techName = userProfile?.full_name ?? 'Technician';
-      notifyAdmins(
-        `Trip Status Update`,
-        `${techName} marked Trip as "${statusLabel}" on job ${job.jobNumber ?? jobId}`,
+      const title = newStatus === 'pending_approval'
+        ? 'Completion Approval Needed'
+        : 'Trip Status Update';
+      const body = newStatus === 'pending_approval'
+        ? `${techName} submitted Trip for approval on job ${job.jobNumber ?? jobId}. Please review notes and photos.`
+        : `${techName} marked Trip as "${statusLabel}" on job ${job.jobNumber ?? jobId}`;
+      notifyAdmins(title, body, { jobId }).catch(() => {});
+    }
+
+    if (isAdmin && newStatus === 'completed') {
+      notifyUser(
+        job.technicianId,
+        'Trip Approved!',
+        `Admin approved completion of Trip on job ${job.jobNumber ?? jobId}.`,
         { jobId }
       ).catch(() => {});
     }

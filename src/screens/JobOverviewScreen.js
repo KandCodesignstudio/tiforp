@@ -116,6 +116,7 @@ export default function JobOverviewScreen({ route, navigation }) {
 
   const jobStatusInfo = getJobStatus(status);
   const activeTrip = trips?.find((t) => t.status !== 'completed' && t.status !== 'for_return') ?? trips?.[0];
+  const pendingTrips = trips?.filter((t) => t.status === 'pending_approval') ?? [];
 
   const callPhone = (phone) => Linking.openURL(`tel:${phone}`);
 
@@ -123,20 +124,34 @@ export default function JobOverviewScreen({ route, navigation }) {
     const info = getTripStatus(trip.status);
     if (!info.next) return;
 
-    if (info.next === 'completed') {
-      // Give option to mark as For Return instead
+    // Admin approves pending_approval → completed
+    if (trip.status === 'pending_approval' && isAdmin) {
+      Alert.alert(
+        'Approve Completion',
+        `Confirm Trip ${trip.tripNumber} is complete? You have reviewed the notes and photos.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Approve', onPress: () => updateTripStatus(job.id, trip.id, 'completed') },
+        ]
+      );
+      return;
+    }
+
+    // Tech at checked_out → submit for approval or for return
+    if (trip.status === 'checked_out' && !isAdmin) {
       Alert.alert(
         'Finish Trip',
         'How is this trip ending?',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'For Return', onPress: () => updateTripStatus(job.id, trip.id, 'for_return') },
-          { text: 'Complete', onPress: () => updateTripStatus(job.id, trip.id, 'completed') },
+          { text: 'Submit for Approval', onPress: () => updateTripStatus(job.id, trip.id, 'pending_approval') },
         ]
       );
-    } else {
-      updateTripStatus(job.id, trip.id, info.next);
+      return;
     }
+
+    updateTripStatus(job.id, trip.id, info.next);
   };
 
   return (
@@ -177,8 +192,27 @@ export default function JobOverviewScreen({ route, navigation }) {
         <Text style={styles.description}>{description}</Text>
       </View>
 
+      {/* Pending approval banner — admin only */}
+      {isAdmin && pendingTrips.length > 0 && pendingTrips.map((trip) => (
+        <View key={trip.id} style={styles.approvalBanner}>
+          <View style={styles.approvalBannerLeft}>
+            <Ionicons name="time-outline" size={20} color="#92400e" />
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.approvalBannerTitle}>Trip {trip.tripNumber} — Awaiting Your Approval</Text>
+              <Text style={styles.approvalBannerSub}>Review notes and photos before approving.</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.approvalBtn}
+            onPress={() => handleAdvanceStatus(trip)}
+          >
+            <Text style={styles.approvalBtnText}>Approve</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+
       {/* Active trip status control */}
-      {activeTrip && (
+      {activeTrip && activeTrip.status !== 'pending_approval' && (
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>Current Trip — #{activeTrip.tripNumber}</Text>
           <View style={styles.statusRow}>
@@ -189,7 +223,7 @@ export default function JobOverviewScreen({ route, navigation }) {
             </View>
           </View>
 
-          {getTripStatus(activeTrip.status).next && (
+          {getTripStatus(activeTrip.status).next && !isAdmin && (
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: Colors.accent }]}
               onPress={() => handleAdvanceStatus(activeTrip)}
@@ -199,7 +233,7 @@ export default function JobOverviewScreen({ route, navigation }) {
           )}
 
           {/* Quick status options for active trips beyond scheduled */}
-          {activeTrip.status !== 'scheduled' && activeTrip.status !== 'completed' && activeTrip.status !== 'for_return' && (
+          {!isAdmin && activeTrip.status !== 'scheduled' && activeTrip.status !== 'completed' && activeTrip.status !== 'for_return' && activeTrip.status !== 'pending_approval' && (
             <TouchableOpacity
               style={styles.linkBtn}
               onPress={() => updateTripStatus(job.id, activeTrip.id, 'for_return')}
@@ -522,6 +556,28 @@ const styles = StyleSheet.create({
   tripStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   tripStatusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   tripActions: { flexDirection: 'row', gap: 12 },
+  approvalBanner: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    padding: 14,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  approvalBannerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  approvalBannerTitle: { fontSize: 13, fontWeight: '700', color: '#92400e' },
+  approvalBannerSub: { fontSize: 11, color: '#b45309', marginTop: 2 },
+  approvalBtn: {
+    backgroundColor: Colors.completed,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginLeft: 10,
+  },
+  approvalBtnText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
   addTripBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 13,

@@ -1,12 +1,13 @@
 import { Colors } from './colors';
 
 export const TRIP_STATUSES = {
-  scheduled:   { label: 'SCHEDULED',   color: Colors.gray,       next: 'en_route',    nextLabel: 'On My Way' },
-  en_route:    { label: 'EN ROUTE',    color: Colors.warning,    next: 'checked_in',  nextLabel: 'Check In' },
-  checked_in:  { label: 'CHECKED IN',  color: Colors.accent,     next: 'checked_out', nextLabel: 'Check Out' },
-  checked_out: { label: 'CHECKED OUT', color: Colors.primary,    next: 'completed',   nextLabel: 'Mark Complete' },
-  completed:   { label: 'COMPLETED',   color: Colors.completed,  next: null,          nextLabel: null },
-  for_return:  { label: 'FOR RETURN',  color: Colors.danger,     next: null,          nextLabel: null },
+  scheduled:        { label: 'SCHEDULED',        color: Colors.gray,       next: 'en_route',         nextLabel: 'On My Way' },
+  en_route:         { label: 'EN ROUTE',         color: Colors.warning,    next: 'checked_in',       nextLabel: 'Check In' },
+  checked_in:       { label: 'CHECKED IN',       color: Colors.accent,     next: 'checked_out',      nextLabel: 'Check Out' },
+  checked_out:      { label: 'CHECKED OUT',      color: Colors.primary,    next: 'pending_approval', nextLabel: 'Submit for Approval' },
+  pending_approval: { label: 'PENDING APPROVAL', color: '#f59e0b',         next: 'completed',        nextLabel: 'Approve Completion' },
+  completed:        { label: 'COMPLETED',        color: Colors.completed,  next: null,               nextLabel: null },
+  for_return:       { label: 'FOR RETURN',       color: Colors.danger,     next: null,               nextLabel: null },
 };
 
 export const JOB_STATUSES = {
@@ -28,4 +29,8 @@ export function rollupJobStatus(trips = []) {
   if (trips.some((t) => t.status === 'for_return')) return 'needs_followup';
   if (trips.every((t) => t.status === 'completed')) return 'completed';
   return 'in_progress';
+}
+
+export function isPendingApproval(trip) {
+  return trip?.status === 'pending_approval';
 }
