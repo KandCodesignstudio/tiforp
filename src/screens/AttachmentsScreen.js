@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
-  ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions, ScrollView,
+  ActivityIndicator, Linking, Image, Modal, SafeAreaView, Dimensions, ScrollView, RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -101,6 +101,12 @@ export default function AttachmentsScreen({ route }) {
   const { jobs, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'attachments' });
   const [uploading, setUploading] = useState(false);
   const [viewer, setViewer] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    Promise.resolve(refresh()).finally(() => setRefreshing(false));
+  };
 
   const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
   const trips = job?.trips ?? [];
@@ -263,6 +269,9 @@ export default function AttachmentsScreen({ route }) {
             <Text style={styles.emptyText}>No attachments for Trip {selectedTrip}</Text>
             <Text style={styles.emptySubText}>Tap + to add files or photos</Text>
           </View>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
         }
       />
 

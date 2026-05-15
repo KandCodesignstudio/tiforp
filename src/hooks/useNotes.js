@@ -17,9 +17,7 @@ export function useNotes(jobId) {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!jobId) return;
-
+  const fetchNotes = () =>
     supabase
       .from('notes')
       .select('*')
@@ -29,6 +27,11 @@ export function useNotes(jobId) {
         if (!error) setNotes((data ?? []).map(transformNote));
         setLoading(false);
       });
+
+  useEffect(() => {
+    if (!jobId) return;
+
+    fetchNotes();
 
     const channel = supabase
       .channel(`notes-${jobId}`)
@@ -68,5 +71,5 @@ export function useNotes(jobId) {
     await supabase.from('notes').delete().eq('id', id);
   };
 
-  return { notes, loading, addNote, updateNote, deleteNote };
+  return { notes, loading, addNote, updateNote, deleteNote, refresh: fetchNotes };
 }

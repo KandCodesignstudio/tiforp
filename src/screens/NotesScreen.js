@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, Alert,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Modal,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Modal, RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -49,11 +49,18 @@ function NoteCard({ note, isOwner, onEdit, onDelete }) {
 export default function NotesScreen({ route }) {
   const { jobId } = route.params;
   const { user, profile, isAdmin } = useAuth();
-  const { jobs } = useJobs({ isAdmin, userId: user?.id, channelId: 'notes' });
+  const { jobs, refresh: refreshJobs } = useJobs({ isAdmin, userId: user?.id, channelId: 'notes' });
   const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
-  const { notes, addNote, updateNote, deleteNote } = useNotes(jobId);
+  const { notes, addNote, updateNote, deleteNote, refresh: refreshNotes } = useNotes(jobId);
   const [text, setText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef(null);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    Promise.all([Promise.resolve(refreshJobs()), Promise.resolve(refreshNotes())])
+      .finally(() => setRefreshing(false));
+  };
 
   const [editingNote, setEditingNote] = useState(null);
   const [editText, setEditText] = useState('');
@@ -141,6 +148,9 @@ export default function NotesScreen({ route }) {
             />
           )}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
+          }
           ListEmptyComponent={
             <Text style={styles.emptyText}>No notes for this trip yet.</Text>
           }

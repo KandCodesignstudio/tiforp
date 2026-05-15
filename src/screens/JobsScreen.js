@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, StatusBar, ScrollView,
@@ -86,7 +86,7 @@ export default function JobsScreen({ navigation }) {
   const [filter, setFilter] = useState('all');
 
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || (user?.email?.split('@')[0]) || 'there';
-  const motivationalMessage = useMemo(() => getRandomMessage(), [user?.id]);
+  const [motivationalMessage, setMotivationalMessage] = useState(() => getRandomMessage());
 
   const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
 
@@ -101,6 +101,7 @@ export default function JobsScreen({ navigation }) {
 
   const onRefresh = () => {
     setRefreshing(true);
+    setMotivationalMessage(getRandomMessage());
     Promise.resolve(refresh()).finally(() => setRefreshing(false));
   };
 
