@@ -8,7 +8,7 @@ export function useProfiles() {
   useEffect(() => {
     supabase
       .from('profiles')
-      .select('id, email, full_name, role')
+      .select('id, full_name, role')
       .eq('role', 'technician')
       .order('full_name', { ascending: true })
       .then(({ data }) => {

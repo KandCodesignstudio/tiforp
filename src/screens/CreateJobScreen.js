@@ -57,7 +57,7 @@ export default function CreateJobScreen({ navigation }) {
       setSaving(true);
       const { error } = await supabase.from('jobs').insert(job);
       if (error) throw error;
-      Alert.alert('Job Created', `Job ${jobNumber} assigned to ${selectedTech.full_name || selectedTech.email}.`, [
+      Alert.alert('Job Created', `Job ${jobNumber} assigned to ${selectedTech.full_name || 'technician'}.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
@@ -113,12 +113,11 @@ export default function CreateJobScreen({ navigation }) {
             >
               <View style={styles.techAvatar}>
                 <Text style={styles.techAvatarText}>
-                  {(tech.full_name || tech.email || '?')[0].toUpperCase()}
+                  {(tech.full_name || '?')[0].toUpperCase()}
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.techName}>{tech.full_name || '(No name)'}</Text>
-                <Text style={styles.techEmail}>{tech.email}</Text>
               </View>
               {selectedTech?.id === tech.id && (
                 <Text style={styles.checkmark}>✓</Text>
