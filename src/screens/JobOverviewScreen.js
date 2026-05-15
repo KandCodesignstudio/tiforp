@@ -118,7 +118,8 @@ export default function JobOverviewScreen({ route, navigation }) {
   const { client, jobNumber, status, description, trips, clientPaid, techPaid } = job;
 
   const jobStatusInfo = getJobStatus(status);
-  const activeTrip = trips?.find((t) => t.status !== 'completed' && t.status !== 'for_return') ?? trips?.[0];
+  const activeTrip = [...(trips ?? [])].reverse().find((t) => t.status !== 'completed' && t.status !== 'for_return')
+    ?? trips?.[trips.length - 1];
   const pendingTrips = trips?.filter((t) => t.status === 'pending_approval') ?? [];
 
   const callPhone = (phone) => Linking.openURL(`tel:${phone}`);
