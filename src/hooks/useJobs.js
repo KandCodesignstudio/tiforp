@@ -42,7 +42,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     fetchJobs();
 
     const channel = supabase
-      .channel(`jobs-changes-${channelId}`)
+      .channel(`jobs-changes-${channelId}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, fetchJobs)
       .subscribe();
 
