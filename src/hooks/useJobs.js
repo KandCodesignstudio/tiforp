@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
+import { rollupJobStatus } from '../utils/status';
 
 function transformJob(row) {
   return {
@@ -7,6 +8,8 @@ function transformJob(row) {
     jobNumber: row.job_number,
     status: row.status,
     technicianId: row.technician_id,
+    clientPaid: row.client_paid ?? false,
+    techPaid: row.tech_paid ?? false,
     client: row.client ?? {},
     description: row.description,
     trips: (row.trips ?? []).map((t) => ({
@@ -47,5 +50,22 @@ export function useJobs({ isAdmin = false, userId = null } = {}) {
     await supabase.from('jobs').update({ status }).eq('id', jobId);
   };
 
-  return { jobs, loading, updateJobStatus, refresh: fetchJobs };
+  const updateTripStatus = async (jobId, tripId, newStatus) => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const updatedTrips = job.trips.map((t) =>
+      t.id === tripId ? { ...t, status: newStatus, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt } : { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt }
+    );
+    const newJobStatus = rollupJobStatus(updatedTrips);
+    await supabase.from('jobs').update({ trips: updatedTrips, status: newJobStatus }).eq('id', jobId);
+  };
+
+  const updatePayments = async (jobId, { clientPaid, techPaid }) => {
+    const payload = {};
+    if (clientPaid !== undefined) payload.client_paid = clientPaid;
+    if (techPaid !== undefined) payload.tech_paid = techPaid;
+    await supabase.from('jobs').update(payload).eq('id', jobId);
+  };
+
+  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, refresh: fetchJobs };
 }

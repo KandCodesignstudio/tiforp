@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, StatusBar,
+  ActivityIndicator, RefreshControl, StatusBar, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { Colors } from '../utils/colors';
+import { getJobStatus } from '../utils/status';
 
 function formatDate(date) {
   if (!date) return '';
@@ -23,10 +24,8 @@ function formatDateTime(date) {
   });
 }
 
-function JobCard({ job, onPress }) {
-  const isInProgress = job.status === 'in_progress';
-  const statusColor = isInProgress ? Colors.inProgress : Colors.completed;
-  const statusLabel = isInProgress ? 'IN PROGRESS' : 'COMPLETED';
+function JobCard({ job, onPress, showPayment }) {
+  const statusInfo = getJobStatus(job.status);
   const tripCount = job.trips?.length ?? 0;
 
   return (
@@ -47,31 +46,64 @@ function JobCard({ job, onPress }) {
             </Text>
           )}
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusInfo.color + '20' }]}>
+          <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
         </View>
       </View>
+      {showPayment && (
+        <View style={styles.paymentRow}>
+          <View style={[styles.payChip, { backgroundColor: (job.clientPaid ? Colors.completed : Colors.warning) + '15' }]}>
+            <Ionicons name={job.clientPaid ? 'checkmark-circle' : 'time-outline'} size={12} color={job.clientPaid ? Colors.completed : Colors.warning} />
+            <Text style={[styles.payChipText, { color: job.clientPaid ? Colors.completed : Colors.warning }]}>
+              CLIENT {job.clientPaid ? 'PAID' : 'UNPAID'}
+            </Text>
+          </View>
+          <View style={[styles.payChip, { backgroundColor: (job.techPaid ? Colors.completed : Colors.warning) + '15' }]}>
+            <Ionicons name={job.techPaid ? 'checkmark-circle' : 'time-outline'} size={12} color={job.techPaid ? Colors.completed : Colors.warning} />
+            <Text style={[styles.payChipText, { color: job.techPaid ? Colors.completed : Colors.warning }]}>
+              TECH {job.techPaid ? 'PAID' : 'UNPAID'}
+            </Text>
+          </View>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
+
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'needs_followup', label: 'For Return' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'unpaid', label: 'Unpaid', adminOnly: true },
+];
 
 export default function JobsScreen({ navigation }) {
   const { logout, user, isAdmin } = useAuth();
   const { jobs, loading, refresh } = useJobs({ isAdmin, userId: user?.id });
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState('all');
 
-  const inProgress = jobs.filter((j) => j.status === 'in_progress');
-  const completed = jobs.filter((j) => j.status === 'completed');
+  const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
+
+  const filteredJobs = jobs.filter((j) => {
+    if (filter === 'all') return true;
+    if (filter === 'unpaid') return !j.clientPaid || !j.techPaid;
+    return j.status === filter;
+  });
+
+  const inProgress = filteredJobs.filter((j) => j.status === 'in_progress' || j.status === 'needs_followup');
+  const completed = filteredJobs.filter((j) => j.status === 'completed');
 
   const onRefresh = () => {
     setRefreshing(true);
-    refresh().finally(() => setRefreshing(false));
+    Promise.resolve(refresh()).finally(() => setRefreshing(false));
   };
 
   const sections = [
-    { type: 'section-header', label: 'In Progress', key: 'h_inprogress' },
+    ...(inProgress.length > 0 ? [{ type: 'section-header', label: 'Active', key: 'h_inprogress' }] : []),
     ...inProgress.map((j) => ({ type: 'job', ...j, key: j.id })),
-    { type: 'section-header', label: 'Completed', key: 'h_completed' },
+    ...(completed.length > 0 ? [{ type: 'section-header', label: 'Completed', key: 'h_completed' }] : []),
     ...completed.map((j) => ({ type: 'job', ...j, key: j.id })),
   ];
 
@@ -86,6 +118,7 @@ export default function JobsScreen({ navigation }) {
     return (
       <JobCard
         job={item}
+        showPayment={isAdmin}
         onPress={() => navigation.navigate('JobDetail', { job: item })}
       />
     );
@@ -108,6 +141,25 @@ export default function JobsScreen({ navigation }) {
         </View>
       </View>
 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
+        {visibleFilters.map((f) => {
+          const active = filter === f.key;
+          return (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => setFilter(f.key)}
+            >
+              <Text style={[styles.filterText, active && styles.filterTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       {loading ? (
         <ActivityIndicator style={styles.loader} size="large" color={Colors.accent} />
       ) : (
@@ -120,7 +172,7 @@ export default function JobsScreen({ navigation }) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No jobs assigned yet.</Text>
+            <Text style={styles.emptyText}>No jobs match this filter.</Text>
           }
         />
       )}
@@ -197,4 +249,39 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   emptyText: { textAlign: 'center', color: Colors.gray, marginTop: 40, fontSize: 15 },
+  filterRow: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.lightGray,
+    marginRight: 8,
+  },
+  filterChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterText: { fontSize: 13, fontWeight: '600', color: Colors.darkGray },
+  filterTextActive: { color: Colors.white },
+  paymentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  payChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  payChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
 });
