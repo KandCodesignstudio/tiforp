@@ -45,7 +45,10 @@ function MainStack() {
         options={({ route, navigation }) => ({
           title: 'Job Detail',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 8 }}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ marginRight: 8, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
+            >
               <Ionicons name="chevron-back" size={24} color={Colors.white} />
             </TouchableOpacity>
           ),
