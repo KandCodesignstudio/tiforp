@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch, ActivityIndicator,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
@@ -30,7 +31,11 @@ function MapPlaceholder({ address }) {
 export default function JobOverviewScreen({ route }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const [showAddTrip, setShowAddTrip] = useState(false);
+  const [newTripDate, setNewTripDate] = useState('');
+  const [newTripScope, setNewTripScope] = useState('');
+  const [savingTrip, setSavingTrip] = useState(false);
 
   const job = jobs.find((j) => j.id === jobId);
 
@@ -133,6 +138,93 @@ export default function JobOverviewScreen({ route }) {
           )}
         </View>
       )}
+
+      {/* Admin: schedule a follow-up trip when job needs return */}
+      {isAdmin && status === 'needs_followup' && (
+        <TouchableOpacity
+          style={styles.addTripBtn}
+          onPress={() => setShowAddTrip(true)}
+        >
+          <Ionicons name="add-circle-outline" size={18} color={Colors.white} />
+          <Text style={styles.addTripBtnText}>Add Next Trip</Text>
+        </TouchableOpacity>
+      )}
+
+      <Modal
+        visible={showAddTrip}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddTrip(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Schedule Next Trip</Text>
+            <Text style={styles.modalSubtitle}>Trip #{(trips?.length ?? 0) + 1}</Text>
+
+            <Text style={styles.modalLabel}>Scheduled Date & Time</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={newTripDate}
+              onChangeText={setNewTripDate}
+              placeholder="YYYY-MM-DD HH:MM"
+              placeholderTextColor={Colors.gray}
+            />
+
+            <Text style={styles.modalLabel}>Scope of Work</Text>
+            <TextInput
+              style={[styles.modalInput, { minHeight: 70, textAlignVertical: 'top' }]}
+              value={newTripScope}
+              onChangeText={setNewTripScope}
+              placeholder="What needs to be done on this trip?"
+              placeholderTextColor={Colors.gray}
+              multiline
+            />
+
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setShowAddTrip(false);
+                  setNewTripDate('');
+                  setNewTripScope('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSaveBtn}
+                disabled={savingTrip}
+                onPress={async () => {
+                  if (!newTripDate.trim()) {
+                    Alert.alert('Date required', 'Please enter a scheduled date.');
+                    return;
+                  }
+                  setSavingTrip(true);
+                  try {
+                    await addTrip(job.id, { scheduledAt: newTripDate, scopeOfWork: newTripScope });
+                    setShowAddTrip(false);
+                    setNewTripDate('');
+                    setNewTripScope('');
+                  } catch (err) {
+                    Alert.alert('Error', err.message);
+                  } finally {
+                    setSavingTrip(false);
+                  }
+                }}
+              >
+                {savingTrip ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.modalSaveText}>Add Trip</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Admin payment controls */}
       {isAdmin && (
@@ -296,4 +388,36 @@ const styles = StyleSheet.create({
   tripDate: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
   tripStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   tripStatusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  addTripBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 13,
+    marginBottom: 12, gap: 6,
+  },
+  addTripBtnText: { color: Colors.white, fontSize: 15, fontWeight: '700' },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center', alignItems: 'center', padding: 20,
+  },
+  modalCard: {
+    backgroundColor: Colors.white, borderRadius: 14, padding: 20, width: '100%',
+  },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
+  modalSubtitle: { fontSize: 12, color: Colors.textLight, marginTop: 2, marginBottom: 16 },
+  modalLabel: { fontSize: 12, fontWeight: '700', color: Colors.darkGray, marginBottom: 6, letterSpacing: 0.5 },
+  modalInput: {
+    backgroundColor: Colors.screenBg, borderRadius: 8, paddingHorizontal: 12,
+    paddingVertical: 10, fontSize: 14, color: Colors.text, marginBottom: 14,
+    borderWidth: 1, borderColor: Colors.lightGray,
+  },
+  modalBtnRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
+  modalCancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 8,
+    backgroundColor: Colors.lightGray, alignItems: 'center',
+  },
+  modalCancelText: { color: Colors.darkGray, fontWeight: '700' },
+  modalSaveBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 8,
+    backgroundColor: Colors.accent, alignItems: 'center',
+  },
+  modalSaveText: { color: Colors.white, fontWeight: '700' },
 });
