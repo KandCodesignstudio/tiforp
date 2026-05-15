@@ -6,6 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../utils/colors';
+import { supabase } from '../config/supabase';
+import { notifyAdmins } from '../utils/notifications';
+import { useAuth } from '../context/AuthContext';
 
 const FILE_ICONS = {
   pdf: 'document-text',
@@ -54,14 +57,25 @@ function AttachmentRow({ item, onDelete }) {
 
 export default function AttachmentsScreen({ route }) {
   const { job } = route.params;
+  const { profile, isAdmin } = useAuth();
   const [attachments, setAttachments] = useState(job.attachments ?? []);
   const [uploading, setUploading] = useState(false);
 
-  const addAttachment = (file) => {
-    setAttachments((prev) => [
-      ...prev,
-      { id: Date.now().toString(), name: file.name, size: file.size, uri: file.uri },
-    ]);
+  const addAttachment = async (file) => {
+    const newAttachment = { id: Date.now().toString(), name: file.name, size: file.size, uri: file.uri };
+    setAttachments((prev) => [...prev, newAttachment]);
+
+    const updatedAttachments = [...attachments, newAttachment];
+    await supabase.from('jobs').update({ attachments: updatedAttachments }).eq('id', job.id);
+
+    if (!isAdmin) {
+      const techName = profile?.full_name ?? 'Technician';
+      notifyAdmins(
+        'New Attachment Uploaded',
+        `${techName} uploaded "${file.name}" on job ${job.jobNumber ?? job.id}`,
+        { jobId: job.id }
+      ).catch(() => {});
+    }
   };
 
   const pickDocument = async () => {
@@ -69,8 +83,7 @@ export default function AttachmentsScreen({ route }) {
       const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
       if (!result.canceled && result.assets?.[0]) {
         setUploading(true);
-        await new Promise((r) => setTimeout(r, 600));
-        addAttachment(result.assets[0]);
+        await addAttachment(result.assets[0]);
         setUploading(false);
       }
     } catch {
@@ -92,10 +105,9 @@ export default function AttachmentsScreen({ route }) {
       });
       if (!result.canceled && result.assets?.[0]) {
         setUploading(true);
-        await new Promise((r) => setTimeout(r, 600));
         const asset = result.assets[0];
         const name = asset.uri.split('/').pop() ?? `photo_${Date.now()}.jpg`;
-        addAttachment({ name, size: asset.fileSize, uri: asset.uri });
+        await addAttachment({ name, size: asset.fileSize, uri: asset.uri });
         setUploading(false);
       }
     } catch {

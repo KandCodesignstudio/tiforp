@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
-import { rollupJobStatus } from '../utils/status';
+import { rollupJobStatus, getTripStatus } from '../utils/status';
+import { notifyAdmins } from '../utils/notifications';
 
 function transformJob(row) {
   return {
@@ -23,7 +24,7 @@ function transformJob(row) {
   };
 }
 
-export function useJobs({ isAdmin = false, userId = null, channelId = 'default' } = {}) {
+export function useJobs({ isAdmin = false, userId = null, channelId = 'default', userProfile = null } = {}) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +68,16 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default' 
     ));
 
     await supabase.from('jobs').update({ trips: updatedTrips, status: newJobStatus }).eq('id', jobId);
+
+    if (!isAdmin) {
+      const statusLabel = getTripStatus(newStatus).label;
+      const techName = userProfile?.full_name ?? 'Technician';
+      notifyAdmins(
+        `Trip Status Update`,
+        `${techName} marked Trip as "${statusLabel}" on job ${job.jobNumber ?? jobId}`,
+        { jobId }
+      ).catch(() => {});
+    }
   };
 
   const updatePayments = async (jobId, { clientPaid, techPaid }) => {

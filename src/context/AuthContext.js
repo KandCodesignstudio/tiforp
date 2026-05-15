@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../config/supabase';
+import { registerPushToken } from '../hooks/useNotifications';
 
 const AuthContext = createContext({});
 
@@ -15,6 +16,7 @@ export function AuthProvider({ children }) {
       .eq('id', userId)
       .single();
     setProfile(data ?? null);
+    registerPushToken(userId).catch(() => {});
   };
 
   useEffect(() => {

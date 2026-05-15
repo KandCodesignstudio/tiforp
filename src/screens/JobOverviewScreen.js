@@ -29,8 +29,8 @@ function MapPlaceholder({ address }) {
 
 export default function JobOverviewScreen({ route }) {
   const { jobId } = route.params;
-  const { user, isAdmin } = useAuth();
-  const { jobs, updateTripStatus, updatePayments } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail' });
+  const { user, isAdmin, profile } = useAuth();
+  const { jobs, updateTripStatus, updatePayments } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
 
   const job = jobs.find((j) => j.id === jobId);
 
