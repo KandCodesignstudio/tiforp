@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, StatusBar, ScrollView,
@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { Colors } from '../utils/colors';
 import { getJobStatus } from '../utils/status';
+import { getRandomMessage } from '../utils/motivationalMessages';
 
 function formatDate(date) {
   if (!date) return '';
@@ -79,10 +80,13 @@ const FILTERS = [
 ];
 
 export default function JobsScreen({ navigation }) {
-  const { logout, user, isAdmin } = useAuth();
+  const { logout, user, profile, isAdmin } = useAuth();
   const { jobs, loading, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'list' });
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
+
+  const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || (user?.email?.split('@')[0]) || 'there';
+  const motivationalMessage = useMemo(() => getRandomMessage(), [user?.id]);
 
   const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
 
@@ -156,6 +160,13 @@ export default function JobsScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {!isAdmin && (
+        <View style={styles.greetingCard}>
+          <Text style={styles.greetingHi}>Hi, {firstName}!</Text>
+          <Text style={styles.greetingMsg}>{motivationalMessage}</Text>
+        </View>
+      )}
 
       <ScrollView
         horizontal
@@ -305,4 +316,21 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   payChipText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+  greetingCard: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.white,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.accent,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  greetingHi: { fontSize: 17, fontWeight: '800', color: Colors.primary, marginBottom: 2 },
+  greetingMsg: { fontSize: 14, color: Colors.text, fontStyle: 'italic' },
 });
