@@ -35,8 +35,18 @@ const STATUS_COLORS = {
 export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
   const {
     jobNumber, description, client, trips = [],
-    technicianName, createdAt,
+    technicianName, createdAt, attachments = [],
   } = job;
+
+  const signatures = (attachments ?? []).filter((a) => a.type === 'signature');
+  const latestSig = signatures.length > 0 ? signatures[signatures.length - 1] : null;
+  const clientSigHTML = latestSig
+    ? `<div class="sig-line" style="display:flex;align-items:flex-end;">
+        <svg viewBox="0 0 400 180" width="100%" height="56" style="display:block;">
+          <path d="${latestSig.svgPath}" stroke="#1A3A6B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+       </div>`
+    : `<div class="sig-line"></div>`;
 
   const logoHTML = logoBase64
     ? `<img src="data:image/png;base64,${logoBase64}" style="height:60px;max-width:180px;object-fit:contain;mix-blend-mode:multiply;" />`
@@ -125,7 +135,8 @@ export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
   /* Signature */
   .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 8px; }
   .sig-block { }
-  .sig-line { border-bottom: 1.5px solid #1F2937; margin-bottom: 6px; height: 40px; }
+  .sig-line { border-bottom: 1.5px solid #1F2937; height: 60px; margin-bottom: 6px; }
+  .sig-label { font-size: 10px; color: #6B7280; letter-spacing: 0.5px; }
   .sig-label { font-size: 10px; color: #6B7280; letter-spacing: 0.5px; }
 
   /* Footer */
@@ -191,9 +202,10 @@ export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
     <div class="section-title">Acknowledgement &amp; Signatures</div>
     <div class="sig-grid">
       <div class="sig-block">
-        <div class="sig-line"></div>
+        ${clientSigHTML}
         <div class="sig-label">Client Signature</div>
       </div>
+
       <div class="sig-block">
         <div class="sig-line"></div>
         <div class="sig-label">Date</div>

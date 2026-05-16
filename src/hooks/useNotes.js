@@ -38,7 +38,16 @@ export function useNotes(jobId) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notes', filter: `job_id=eq.${jobId}` },
-        (payload) => setNotes((prev) => [...prev, transformNote(payload.new)]),
+        (payload) => {
+          const real = transformNote(payload.new);
+          setNotes((prev) => {
+            const withoutOptimistic = prev.filter(
+              (n) => !(n.id.startsWith?.('optimistic-') && n.text === real.text && n.userId === real.userId)
+            );
+            if (withoutOptimistic.some((n) => n.id === real.id)) return withoutOptimistic;
+            return [...withoutOptimistic, real];
+          });
+        },
       )
       .on(
         'postgres_changes',
@@ -56,7 +65,23 @@ export function useNotes(jobId) {
   }, [jobId]);
 
   const addNote = async (jobId, text, author, tripNumber, userId) => {
-    await supabase.from('notes').insert({ job_id: jobId, text, author, trip_number: tripNumber, user_id: userId ?? null });
+    const optimistic = {
+      id: `optimistic-${Date.now()}`,
+      jobId,
+      tripNumber,
+      author,
+      userId: userId ?? null,
+      text,
+      createdAt: new Date(),
+    };
+    setNotes((prev) => [...prev, optimistic]);
+    const { error } = await supabase.from('notes').insert({
+      job_id: jobId, text, author, trip_number: tripNumber, user_id: userId ?? null,
+    });
+    if (error) {
+      setNotes((prev) => prev.filter((n) => n.id !== optimistic.id));
+      throw error;
+    }
   };
 
   const updateNote = async (id, text) => {
