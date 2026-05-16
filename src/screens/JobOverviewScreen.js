@@ -7,6 +7,8 @@ import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 import { Colors } from '../utils/colors';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
@@ -148,7 +150,17 @@ export default function JobOverviewScreen({ route, navigation }) {
   const handleExportPdf = async () => {
     try {
       setExportingPdf(true);
-      const html = generateWorkOrderHTML(job, notes);
+      let logoBase64 = null;
+      try {
+        const asset = Asset.fromModule(require('../../assets/logo.png'));
+        await asset.downloadAsync();
+        logoBase64 = await FileSystem.readAsStringAsync(asset.localUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      } catch (_) {
+        // logo not available — PDF will render without it
+      }
+      const html = generateWorkOrderHTML(job, notes, logoBase64);
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf',

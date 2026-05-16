@@ -31,11 +31,16 @@ const STATUS_COLORS = {
   for_return: '#EF4444',
 };
 
-export function generateWorkOrderHTML(job, notes = []) {
+// logoBase64: optional base64 string of the logo image (no data URI prefix needed)
+export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
   const {
-    jobNumber, description, client, trips = [], attachments = [],
-    clientPaid, techPaid, technicianName, createdAt, status,
+    jobNumber, description, client, trips = [],
+    technicianName, createdAt,
   } = job;
+
+  const logoHTML = logoBase64
+    ? `<img src="data:image/png;base64,${logoBase64}" style="height:60px;max-width:180px;object-fit:contain;mix-blend-mode:multiply;" />`
+    : `<div style="font-size:22px;font-weight:800;color:#1A3A6B;letter-spacing:1px;">ITFORP</div>`;
 
   const tripsHTML = (trips ?? []).map((trip) => {
     const tripNotes = (notes ?? []).filter((n) => n.tripNumber === trip.tripNumber);
@@ -73,16 +78,6 @@ export function generateWorkOrderHTML(job, notes = []) {
       </div>`;
   }).join('');
 
-  const paymentRows = `
-    <tr>
-      <td>Client Payment</td>
-      <td class="${clientPaid ? 'paid' : 'unpaid'}">${clientPaid ? '✓ Paid' : '⏳ Unpaid'}</td>
-    </tr>
-    <tr>
-      <td>Technician Payment</td>
-      <td class="${techPaid ? 'paid' : 'unpaid'}">${techPaid ? '✓ Paid' : '⏳ Unpaid'}</td>
-    </tr>`;
-
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,9 +89,7 @@ export function generateWorkOrderHTML(job, notes = []) {
   .page { max-width: 780px; margin: 0 auto; padding: 32px 28px; }
 
   /* Header */
-  .doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1A3A6B; padding-bottom: 20px; margin-bottom: 24px; }
-  .brand { font-size: 22px; font-weight: 800; color: #1A3A6B; letter-spacing: 1px; }
-  .brand-sub { font-size: 11px; color: #6B7280; margin-top: 2px; letter-spacing: 0.5px; }
+  .doc-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1A3A6B; padding-bottom: 20px; margin-bottom: 24px; }
   .doc-title { text-align: right; }
   .doc-title h1 { font-size: 26px; font-weight: 800; color: #1A3A6B; letter-spacing: 2px; }
   .doc-title p { font-size: 12px; color: #6B7280; margin-top: 4px; }
@@ -108,7 +101,6 @@ export function generateWorkOrderHTML(job, notes = []) {
 
   /* Info grid */
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
-  .info-item { }
   .info-item .label { font-size: 10px; font-weight: 600; color: #9BA5B4; text-transform: uppercase; letter-spacing: 0.8px; }
   .info-item .value { font-size: 13px; color: #1F2937; margin-top: 2px; font-weight: 500; }
 
@@ -130,12 +122,11 @@ export function generateWorkOrderHTML(job, notes = []) {
   .note-meta { font-size: 10px; color: #9BA5B4; margin-top: 3px; }
   .empty { font-size: 12px; color: #9BA5B4; font-style: italic; }
 
-  /* Payment */
-  .payment-table { width: 100%; border-collapse: collapse; }
-  .payment-table td { padding: 8px 12px; border-bottom: 1px solid #E8ECF2; font-size: 13px; }
-  .payment-table td:first-child { color: #4B5563; font-weight: 500; }
-  .paid { color: #10B981; font-weight: 700; }
-  .unpaid { color: #F59E0B; font-weight: 700; }
+  /* Signature */
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 8px; }
+  .sig-block { }
+  .sig-line { border-bottom: 1.5px solid #1F2937; margin-bottom: 6px; height: 40px; }
+  .sig-label { font-size: 10px; color: #6B7280; letter-spacing: 0.5px; }
 
   /* Footer */
   .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #E8ECF2; display: flex; justify-content: space-between; }
@@ -147,10 +138,7 @@ export function generateWorkOrderHTML(job, notes = []) {
 
   <!-- Header -->
   <div class="doc-header">
-    <div>
-      <div class="brand">ITforP Core</div>
-      <div class="brand-sub">Field Service Management</div>
-    </div>
+    <div>${logoHTML}</div>
     <div class="doc-title">
       <h1>WORK ORDER</h1>
       <p class="job-number"># ${jobNumber ?? '—'}</p>
@@ -198,15 +186,32 @@ export function generateWorkOrderHTML(job, notes = []) {
     ${tripsHTML || '<p class="empty">No trips recorded.</p>'}
   </div>
 
-  <!-- Payment -->
+  <!-- Signatures -->
   <div class="section">
-    <div class="section-title">Payment Status</div>
-    <table class="payment-table"><tbody>${paymentRows}</tbody></table>
+    <div class="section-title">Acknowledgement &amp; Signatures</div>
+    <div class="sig-grid">
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Client Signature</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Date</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Technician / Admin Signature</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-line"></div>
+        <div class="sig-label">Date</div>
+      </div>
+    </div>
   </div>
 
   <!-- Footer -->
   <div class="footer">
-    <p>ITforP Core — Confidential Work Order</p>
+    <p>Confidential Work Order</p>
     <p>Job # ${jobNumber ?? '—'} · ${formatDate(new Date())}</p>
   </div>
 
