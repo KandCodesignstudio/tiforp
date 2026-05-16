@@ -92,7 +92,7 @@ function MapWithPin({ address }) {
 export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { notes } = useNotes(jobId);
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
@@ -570,6 +570,36 @@ export default function JobOverviewScreen({ route, navigation }) {
         </TouchableOpacity>
       )}
 
+      {isAdmin && status !== 'closed' && (
+        <TouchableOpacity
+          style={styles.closeJobBtn}
+          onPress={() => {
+            Alert.alert(
+              'Close Job',
+              `Mark Job ${jobNumber} as closed? This means all work is complete and no return visit is needed.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Close Job',
+                  style: 'destructive',
+                  onPress: () => closeJob(job.id),
+                },
+              ]
+            );
+          }}
+        >
+          <Ionicons name="checkmark-circle-outline" size={18} color={Colors.white} />
+          <Text style={styles.closeJobBtnText}>Close Job</Text>
+        </TouchableOpacity>
+      )}
+
+      {status === 'closed' && (
+        <View style={styles.closedBanner}>
+          <Ionicons name="checkmark-circle" size={18} color={Colors.completed} />
+          <Text style={styles.closedBannerText}>This job has been closed</Text>
+        </View>
+      )}
+
       {client?.contacts?.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>Contacts</Text>
@@ -752,6 +782,30 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   exportBtnText: { fontSize: 14, fontWeight: '700', color: Colors.accent },
+  closeJobBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.completed,
+    borderRadius: 10,
+    paddingVertical: 13,
+    marginBottom: 12,
+  },
+  closeJobBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.completed + '15',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.completed,
+    paddingVertical: 13,
+    marginBottom: 12,
+  },
+  closedBannerText: { fontSize: 14, fontWeight: '700', color: Colors.completed },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: Colors.textLight, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 },
   statusRow: { flexDirection: 'row', marginBottom: 14 },
   statusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },

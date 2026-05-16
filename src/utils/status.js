@@ -14,6 +14,7 @@ export const JOB_STATUSES = {
   in_progress:    { label: 'IN PROGRESS',    color: Colors.inProgress },
   completed:      { label: 'COMPLETED',      color: Colors.completed },
   needs_followup: { label: 'NEEDS FOLLOWUP', color: Colors.danger },
+  closed:         { label: 'CLOSED',         color: Colors.gray },
 };
 
 export function getTripStatus(status) {

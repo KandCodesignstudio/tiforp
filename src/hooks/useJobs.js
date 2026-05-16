@@ -200,5 +200,10 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, attachments } : j));
   };
 
-  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, refresh: fetchJobs };
+  const closeJob = async (jobId) => {
+    setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, status: 'closed' } : j));
+    await supabase.from('jobs').update({ status: 'closed' }).eq('id', jobId);
+  };
+
+  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, refresh: fetchJobs };
 }
