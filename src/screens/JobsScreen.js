@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, StatusBar, ScrollView,
+  ActivityIndicator, RefreshControl, StatusBar, ScrollView, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -86,6 +86,8 @@ export default function JobsScreen({ navigation }) {
   const { unreadCount } = useNotificationInbox(user?.id, 'badge');
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || (user?.email?.split('@')[0]) || 'there';
   const [motivationalMessage, setMotivationalMessage] = useState(() => getRandomMessage());
@@ -93,9 +95,21 @@ export default function JobsScreen({ navigation }) {
   const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
 
   const filteredJobs = jobs.filter((j) => {
-    if (filter === 'all') return true;
-    if (filter === 'unpaid') return !j.clientPaid || !j.techPaid;
-    return j.status === filter;
+    const matchesFilter = (() => {
+      if (filter === 'all') return true;
+      if (filter === 'unpaid') return !j.clientPaid || !j.techPaid;
+      return j.status === filter;
+    })();
+    if (!matchesFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        (j.jobNumber ?? '').toLowerCase().includes(q) ||
+        (j.client?.name ?? '').toLowerCase().includes(q) ||
+        (j.client?.address ?? '').toLowerCase().includes(q)
+      );
+    }
+    return true;
   });
 
   const inProgress = filteredJobs.filter((j) => j.status === 'in_progress' || j.status === 'needs_followup');
@@ -149,6 +163,9 @@ export default function JobsScreen({ navigation }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {isAdmin && (
             <>
+              <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} style={styles.logoutBtn}>
+                <Ionicons name="bar-chart-outline" size={22} color={Colors.white} />
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate('AddTechnician')} style={styles.logoutBtn}>
                 <Ionicons name="person-add-outline" size={22} color={Colors.white} />
               </TouchableOpacity>
@@ -160,6 +177,15 @@ export default function JobsScreen({ navigation }) {
               </TouchableOpacity>
             </>
           )}
+          <TouchableOpacity
+            onPress={() => {
+              if (showSearch) setSearchQuery('');
+              setShowSearch((v) => !v);
+            }}
+            style={styles.logoutBtn}
+          >
+            <Ionicons name="search-outline" size={24} color={Colors.white} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Notifications')}
             style={styles.logoutBtn}
@@ -181,6 +207,26 @@ export default function JobsScreen({ navigation }) {
         <View style={styles.greetingCard}>
           <Text style={styles.greetingHi}>Hi, {firstName}!</Text>
           <Text style={styles.greetingMsg}>{motivationalMessage}</Text>
+        </View>
+      )}
+
+      {showSearch && (
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={18} color={Colors.gray} style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search by job #, client, or address…"
+            placeholderTextColor={Colors.textLight}
+            autoFocus
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={18} color={Colors.gray} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -216,7 +262,9 @@ export default function JobsScreen({ navigation }) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No jobs match this filter.</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery.trim() ? 'No jobs match your search.' : 'No jobs match this filter.'}
+            </Text>
           }
         />
       )}
@@ -362,4 +410,21 @@ const styles = StyleSheet.create({
   },
   greetingHi: { fontSize: 17, fontWeight: '800', color: Colors.primary, marginBottom: 2 },
   greetingMsg: { fontSize: 14, color: Colors.text, fontStyle: 'italic' },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    padding: 12,
+    margin: 0,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    padding: 0,
+  },
 });

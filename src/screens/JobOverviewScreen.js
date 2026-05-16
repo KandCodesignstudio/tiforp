@@ -5,12 +5,15 @@ import {
 } from 'react-native';
 import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { Colors } from '../utils/colors';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotes } from '../hooks/useNotes';
 import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 import { TabActions } from '@react-navigation/native';
+import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 
 function MapWithPin({ address }) {
   const [coords, setCoords] = useState(null);
@@ -89,6 +92,7 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [newTripDate, setNewTripDate] = useState('');
   const [newTripScope, setNewTripScope] = useState('');
   const [savingTrip, setSavingTrip] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
   const [editDate, setEditDate] = useState('');
@@ -139,6 +143,23 @@ export default function JobOverviewScreen({ route, navigation }) {
         { text: 'Cancel', style: 'cancel' },
       ]
     );
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      setExportingPdf(true);
+      const html = generateWorkOrderHTML(job, notes);
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: `Work Order ${job.jobNumber}`,
+        UTI: 'com.adobe.pdf',
+      });
+    } catch (err) {
+      Alert.alert('Export Failed', err.message);
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   const handleDeleteTrip = (trip) => {
@@ -439,6 +460,23 @@ export default function JobOverviewScreen({ route, navigation }) {
         </View>
       )}
 
+      {isAdmin && (
+        <TouchableOpacity
+          style={styles.exportBtn}
+          onPress={handleExportPdf}
+          disabled={exportingPdf}
+        >
+          {exportingPdf ? (
+            <ActivityIndicator color={Colors.accent} size="small" />
+          ) : (
+            <>
+              <Ionicons name="document-outline" size={18} color={Colors.accent} />
+              <Text style={styles.exportBtnText}>Export Work Order PDF</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+
       {client?.contacts?.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>Contacts</Text>
@@ -598,6 +636,19 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 14, color: Colors.text, flex: 1, lineHeight: 20 },
   infoLink: { color: Colors.accent },
   description: { fontSize: 14, color: Colors.darkGray, lineHeight: 21 },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.accent,
+    paddingVertical: 13,
+    marginBottom: 12,
+  },
+  exportBtnText: { fontSize: 14, fontWeight: '700', color: Colors.accent },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: Colors.textLight, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 },
   statusRow: { flexDirection: 'row', marginBottom: 14 },
   statusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
