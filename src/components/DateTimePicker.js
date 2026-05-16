@@ -6,6 +6,8 @@ import RNDateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../utils/colors';
 
+const isIPad = Platform.OS === 'ios' && Platform.isPad;
+
 function formatDisplay(date) {
   if (!date) return null;
   return date.toLocaleString('en-US', {
@@ -57,7 +59,7 @@ export default function DateTimePickerField({
     }
   };
 
-  // Android uses native dialog — no modal needed
+  // Android — native dialog, no modal needed
   if (Platform.OS === 'android') {
     return (
       <View style={style}>
@@ -80,7 +82,43 @@ export default function DateTimePickerField({
     );
   }
 
-  // iOS — bottom sheet modal with inline picker
+  // iPad — centered modal with inline calendar+time picker
+  if (isIPad) {
+    return (
+      <View style={style}>
+        <TouchableOpacity style={styles.field} onPress={handlePress}>
+          <Text style={currentValue ? styles.value : styles.placeholder}>
+            {currentValue ? formatDisplay(currentValue) : placeholder}
+          </Text>
+          <Ionicons name="calendar-outline" size={18} color={Colors.gray} />
+        </TouchableOpacity>
+
+        <Modal visible={show} transparent animationType="fade">
+          <Pressable style={styles.overlay} onPress={() => setShow(false)} />
+          <View style={styles.iPadCenter}>
+            <View style={styles.iPadCard}>
+              <View style={styles.sheetHeader}>
+                <Text style={styles.sheetTitle}>Select Date & Time</Text>
+                <TouchableOpacity onPress={() => setShow(false)} style={styles.doneBtn}>
+                  <Text style={styles.doneBtnText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <RNDateTimePicker
+                value={currentValue ?? new Date()}
+                mode="datetime"
+                display="inline"
+                onChange={handleChange}
+                minimumDate={minimumDate}
+                style={{ backgroundColor: Colors.white }}
+              />
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
+  // iPhone — bottom sheet modal with spinner
   return (
     <View style={style}>
       <TouchableOpacity style={styles.field} onPress={handlePress}>
@@ -128,13 +166,34 @@ const styles = StyleSheet.create({
   },
   value: { fontSize: 15, color: Colors.text },
   placeholder: { fontSize: 15, color: Colors.gray },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+
+  // iPhone bottom sheet
   sheet: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 32,
   },
+
+  // iPad centered card
+  iPadCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  iPadCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    overflow: 'hidden',
+    width: 400,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+  },
+
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
