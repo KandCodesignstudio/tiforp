@@ -216,6 +216,20 @@ export default function JobOverviewScreen({ route, navigation }) {
   const pendingTrips = trips?.filter((t) => t.status === 'pending_approval') ?? [];
   const lastTripCompleted = trips?.length > 0 && trips[trips.length - 1].status === 'completed';
 
+  // Deliverable readiness for Submit for Approval button
+  const activeTripNum = activeTrip?.tripNumber;
+  const tripNotes = notes.filter((n) => n.tripNumber === activeTripNum);
+  const tripAttachments = (job.attachments ?? []).filter(
+    (a) => (a.tripNumber ?? 1) === activeTripNum && a.type !== 'signature'
+  );
+  const tripSignature = (job.attachments ?? []).find(
+    (a) => a.tripNumber === activeTripNum && a.type === 'signature'
+  );
+  const hasNotes = tripNotes.length > 0;
+  const hasAttachments = tripAttachments.length > 0;
+  const hasSignature = !!tripSignature;
+  const readyToSubmit = hasNotes && hasAttachments && hasSignature;
+
   const callPhone = (phone) => Linking.openURL(`tel:${phone}`);
 
   function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -439,23 +453,59 @@ export default function JobOverviewScreen({ route, navigation }) {
             </View>
           </View>
 
-          {getTripStatus(activeTrip.status).next && !isAdmin && (
+          {/* Client signature button — shown at checked_out */}
+          {!isAdmin && activeTrip.status === 'checked_out' && (
+            <TouchableOpacity
+              style={[styles.sigBtn, hasSignature && styles.sigBtnDone]}
+              onPress={() => { setPendingApprovalTrip(activeTrip); setShowSignature(true); }}
+            >
+              <Ionicons
+                name={hasSignature ? 'checkmark-circle' : 'pencil-outline'}
+                size={16}
+                color={hasSignature ? Colors.completed : Colors.primary}
+              />
+              <Text style={[styles.sigBtnText, hasSignature && { color: Colors.completed }]}>
+                {hasSignature ? 'Signature Collected' : 'Get Client Signature'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Submit for Approval — greyed out until all deliverables met */}
+          {getTripStatus(activeTrip.status).next && !isAdmin && activeTrip.status === 'checked_out' && (
+            <>
+              {!readyToSubmit && (
+                <View style={styles.checklistBox}>
+                  <Text style={styles.checklistTitle}>Required before submitting:</Text>
+                  <Text style={[styles.checklistItem, hasNotes && styles.checklistDone]}>
+                    {hasNotes ? '✓' : '○'} Trip notes
+                  </Text>
+                  <Text style={[styles.checklistItem, hasAttachments && styles.checklistDone]}>
+                    {hasAttachments ? '✓' : '○'} Photos / files
+                  </Text>
+                  <Text style={[styles.checklistItem, hasSignature && styles.checklistDone]}>
+                    {hasSignature ? '✓' : '○'} Client signature
+                  </Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: readyToSubmit ? Colors.accent : Colors.lightGray }]}
+                onPress={() => readyToSubmit && handleAdvanceStatus(activeTrip)}
+                disabled={!readyToSubmit}
+              >
+                <Text style={[styles.actionBtnText, !readyToSubmit && { color: Colors.gray }]}>
+                  {getTripStatus(activeTrip.status).nextLabel}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Advance button for non-checked_out statuses */}
+          {getTripStatus(activeTrip.status).next && !isAdmin && activeTrip.status !== 'checked_out' && (
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: Colors.accent }]}
               onPress={() => handleAdvanceStatus(activeTrip)}
             >
               <Text style={styles.actionBtnText}>{getTripStatus(activeTrip.status).nextLabel}</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Client signature button — shown at checked_out before submitting */}
-          {!isAdmin && activeTrip.status === 'checked_out' && (
-            <TouchableOpacity
-              style={styles.sigBtn}
-              onPress={() => { setPendingApprovalTrip(activeTrip); setShowSignature(true); }}
-            >
-              <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
-              <Text style={styles.sigBtnText}>Get Client Signature</Text>
             </TouchableOpacity>
           )}
 
@@ -853,7 +903,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginTop: 8,
   },
+  sigBtnDone: { borderColor: Colors.completed, backgroundColor: Colors.completed + '10' },
   sigBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  checklistBox: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    padding: 12,
+    marginTop: 10,
+  },
+  checklistTitle: { fontSize: 12, fontWeight: '700', color: '#92400E', marginBottom: 6 },
+  checklistItem: { fontSize: 13, color: Colors.gray, marginBottom: 3 },
+  checklistDone: { color: Colors.completed },
   closeJobBtn: {
     flexDirection: 'row',
     alignItems: 'center',

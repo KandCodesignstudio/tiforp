@@ -7,7 +7,7 @@ export const TRIP_STATUSES = {
   checked_out:      { label: 'CHECKED OUT',      color: Colors.primary,    next: 'pending_approval', nextLabel: 'Submit for Approval',   prev: 'checked_in' },
   pending_approval: { label: 'PENDING APPROVAL', color: '#f59e0b',         next: 'completed',        nextLabel: 'Approve Completion',    prev: 'checked_out' },
   completed:        { label: 'COMPLETED',        color: Colors.completed,  next: null,               nextLabel: null,                   prev: null },
-  for_return:       { label: 'FOR RETURN',       color: Colors.danger,     next: null,               nextLabel: null,                   prev: null },
+  for_return:       { label: 'FOR RETURN',       color: Colors.danger,     next: null,               nextLabel: null,                   prev: 'checked_out' },
 };
 
 export const JOB_STATUSES = {
