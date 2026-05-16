@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
 import { useProfiles } from '../hooks/useProfiles';
+import DateTimePickerField from '../components/DateTimePicker';
 import { Colors } from '../utils/colors';
 
 export default function CreateJobScreen({ navigation }) {
@@ -17,7 +18,7 @@ export default function CreateJobScreen({ navigation }) {
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [scopeOfWork, setScopeOfWork] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduledAt, setScheduledAt] = useState(null);
   const [selectedTech, setSelectedTech] = useState(null);
   const [techSearch, setTechSearch] = useState('');
   const [saving, setSaving] = useState(false);
@@ -41,7 +42,7 @@ export default function CreateJobScreen({ navigation }) {
     const trip = {
       id: `trip_${Date.now()}`,
       tripNumber: 1,
-      scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+      scheduledAt: scheduledAt ? scheduledAt.toISOString() : null,
       status: 'scheduled',
       scopeOfWork: scopeOfWork.trim(),
     };
@@ -102,7 +103,11 @@ export default function CreateJobScreen({ navigation }) {
         <Text style={styles.section}>Trip 1</Text>
 
         <Text style={styles.label}>Scheduled Date & Time</Text>
-        <TextInput style={styles.input} value={scheduledAt} onChangeText={setScheduledAt} placeholder="YYYY-MM-DD HH:MM (e.g. 2026-06-15 09:00)" placeholderTextColor={Colors.gray} />
+        <DateTimePickerField
+          value={scheduledAt}
+          onChange={setScheduledAt}
+          placeholder="Tap to select date & time"
+        />
 
         <Text style={styles.label}>Scope of Work</Text>
         <TextInput style={[styles.input, styles.multiline]} value={scopeOfWork} onChangeText={setScopeOfWork} placeholder="List tasks, one per line" placeholderTextColor={Colors.gray} multiline numberOfLines={4} />

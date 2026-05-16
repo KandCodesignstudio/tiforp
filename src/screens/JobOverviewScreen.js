@@ -19,6 +19,7 @@ import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 import { TabActions } from '@react-navigation/native';
 import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 import { supabase } from '../config/supabase';
+import DateTimePickerField from '../components/DateTimePicker';
 
 function MapWithPin({ address }) {
   const [coords, setCoords] = useState(null);
@@ -94,13 +95,13 @@ export default function JobOverviewScreen({ route, navigation }) {
   const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { notes } = useNotes(jobId);
   const [showAddTrip, setShowAddTrip] = useState(false);
-  const [newTripDate, setNewTripDate] = useState('');
+  const [newTripDate, setNewTripDate] = useState(null);
   const [newTripScope, setNewTripScope] = useState('');
   const [savingTrip, setSavingTrip] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
-  const [editDate, setEditDate] = useState('');
+  const [editDate, setEditDate] = useState(null);
   const [editScope, setEditScope] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
@@ -113,19 +114,16 @@ export default function JobOverviewScreen({ route, navigation }) {
 
   const openEditTrip = (trip) => {
     const d = trip.scheduledAt instanceof Date ? trip.scheduledAt : trip.scheduledAt ? new Date(trip.scheduledAt) : null;
-    const formatted = d
-      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-      : '';
     setEditingTrip(trip);
-    setEditDate(formatted);
+    setEditDate(d);
     setEditScope(trip.scopeOfWork ?? '');
   };
 
   const handleEditSave = async () => {
-    if (!editDate.trim()) { Alert.alert('Date required', 'Please enter a scheduled date.'); return; }
+    if (!editDate) { Alert.alert('Date required', 'Please select a scheduled date.'); return; }
     setSavingEdit(true);
     try {
-      await updateTrip(job.id, editingTrip.id, { scheduledAt: editDate, scopeOfWork: editScope });
+      await updateTrip(job.id, editingTrip.id, { scheduledAt: editDate instanceof Date ? editDate.toISOString() : editDate, scopeOfWork: editScope });
       setEditingTrip(null);
     } catch (err) {
       Alert.alert('Error', err.message);
@@ -458,12 +456,10 @@ export default function JobOverviewScreen({ route, navigation }) {
             <Text style={styles.modalSubtitle}>Trip #{(trips?.length ?? 0) + 1}</Text>
 
             <Text style={styles.modalLabel}>Scheduled Date & Time</Text>
-            <TextInput
-              style={styles.modalInput}
+            <DateTimePickerField
               value={newTripDate}
-              onChangeText={setNewTripDate}
-              placeholder="YYYY-MM-DD HH:MM"
-              placeholderTextColor={Colors.gray}
+              onChange={setNewTripDate}
+              placeholder="Tap to select date & time"
             />
 
             <Text style={styles.modalLabel}>Scope of Work</Text>
@@ -481,7 +477,7 @@ export default function JobOverviewScreen({ route, navigation }) {
                 style={styles.modalCancelBtn}
                 onPress={() => {
                   setShowAddTrip(false);
-                  setNewTripDate('');
+                  setNewTripDate(null);
                   setNewTripScope('');
                 }}
               >
@@ -491,15 +487,15 @@ export default function JobOverviewScreen({ route, navigation }) {
                 style={styles.modalSaveBtn}
                 disabled={savingTrip}
                 onPress={async () => {
-                  if (!newTripDate.trim()) {
-                    Alert.alert('Date required', 'Please enter a scheduled date.');
+                  if (!newTripDate) {
+                    Alert.alert('Date required', 'Please select a scheduled date.');
                     return;
                   }
                   setSavingTrip(true);
                   try {
-                    await addTrip(job.id, { scheduledAt: newTripDate, scopeOfWork: newTripScope });
+                    await addTrip(job.id, { scheduledAt: newTripDate.toISOString(), scopeOfWork: newTripScope });
                     setShowAddTrip(false);
-                    setNewTripDate('');
+                    setNewTripDate(null);
                     setNewTripScope('');
                   } catch (err) {
                     Alert.alert('Error', err.message);
@@ -641,12 +637,10 @@ export default function JobOverviewScreen({ route, navigation }) {
             <Text style={styles.modalTitle}>Edit Trip {editingTrip?.tripNumber}</Text>
 
             <Text style={styles.modalLabel}>Scheduled Date & Time</Text>
-            <TextInput
-              style={styles.modalInput}
+            <DateTimePickerField
               value={editDate}
-              onChangeText={setEditDate}
-              placeholder="YYYY-MM-DD HH:MM"
-              placeholderTextColor={Colors.gray}
+              onChange={setEditDate}
+              placeholder="Tap to select date & time"
             />
 
             <Text style={styles.modalLabel}>Scope of Work</Text>
