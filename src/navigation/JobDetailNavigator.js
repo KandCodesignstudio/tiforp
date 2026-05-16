@@ -6,6 +6,7 @@ import JobOverviewScreen from '../screens/JobOverviewScreen';
 import InstructionsScreen from '../screens/InstructionsScreen';
 import AttachmentsScreen from '../screens/AttachmentsScreen';
 import NotesScreen from '../screens/NotesScreen';
+import ChatScreen from '../screens/ChatScreen';
 import { Colors } from '../utils/colors';
 
 const Tab = createBottomTabNavigator();
@@ -75,7 +76,16 @@ export default function JobDetailNavigator({ route }) {
         initialParams={{ jobId, job }}
         options={{
           tabBarLabel: 'NOTES',
-          tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-outline" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="document-outline" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Chat"
+        component={ChatScreen}
+        initialParams={{ jobId, job }}
+        options={{
+          tabBarLabel: 'CHAT',
+          tabBarIcon: ({ focused }) => <TabIcon name="chatbubbles-outline" focused={focused} />,
         }}
       />
     </Tab.Navigator>

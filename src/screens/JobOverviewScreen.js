@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import * as Location from 'expo-location';
 import { Asset } from 'expo-asset';
+import SignaturePad from '../components/SignaturePad';
 import { Colors } from '../utils/colors';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
@@ -16,6 +18,7 @@ import { useNotes } from '../hooks/useNotes';
 import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 import { TabActions } from '@react-navigation/native';
 import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
+import { supabase } from '../config/supabase';
 
 function MapWithPin({ address }) {
   const [coords, setCoords] = useState(null);
@@ -100,6 +103,8 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [editDate, setEditDate] = useState('');
   const [editScope, setEditScope] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [showSignature, setShowSignature] = useState(false);
+  const [pendingApprovalTrip, setPendingApprovalTrip] = useState(null);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -208,6 +213,77 @@ export default function JobOverviewScreen({ route, navigation }) {
 
   const callPhone = (phone) => Linking.openURL(`tel:${phone}`);
 
+  function haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  const doCheckIn = (trip) => updateTripStatus(job.id, trip.id, 'checked_in');
+
+  const handleCheckInWithGPS = async (trip) => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { doCheckIn(trip); return; }
+
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const address = job.client?.address;
+      if (!address) { doCheckIn(trip); return; }
+
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const results = await res.json();
+      if (!results.length) { doCheckIn(trip); return; }
+
+      const dist = Math.round(
+        haversineMeters(pos.coords.latitude, pos.coords.longitude,
+          parseFloat(results[0].lat), parseFloat(results[0].lon))
+      );
+
+      if (dist > 500) {
+        Alert.alert(
+          'You seem far from the job site',
+          `You are approximately ${dist >= 1000 ? (dist / 1000).toFixed(1) + ' km' : dist + ' m'} away from the job address. Check in anyway?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Check In Anyway', onPress: () => doCheckIn(trip) },
+          ]
+        );
+      } else {
+        doCheckIn(trip);
+      }
+    } catch (_) {
+      doCheckIn(trip);
+    }
+  };
+
+  const handleSignatureConfirm = async (svgPathData) => {
+    setShowSignature(false);
+    const trip = pendingApprovalTrip;
+    setPendingApprovalTrip(null);
+    if (!trip) return;
+
+    // Save signature as a special attachment entry
+    const sigAttachment = {
+      id: `sig_${Date.now()}`,
+      type: 'signature',
+      tripNumber: trip.tripNumber,
+      svgPath: svgPathData,
+      name: 'Client Signature',
+      createdAt: new Date().toISOString(),
+    };
+    const updatedAttachments = [...(job.attachments ?? []), sigAttachment];
+    await supabase.from('jobs').update({ attachments: updatedAttachments }).eq('id', job.id);
+    updateTripStatus(job.id, trip.id, 'pending_approval');
+  };
+
   const handleAdvanceStatus = (trip) => {
     const info = getTripStatus(trip.status);
     if (!info.next) return;
@@ -251,9 +327,15 @@ export default function JobOverviewScreen({ route, navigation }) {
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'For Return', onPress: () => updateTripStatus(job.id, trip.id, 'for_return') },
-          { text: 'Submit for Approval', onPress: () => updateTripStatus(job.id, trip.id, 'pending_approval') },
+          { text: 'Submit for Approval', onPress: () => { setPendingApprovalTrip(trip); setShowSignature(true); } },
         ]
       );
+      return;
+    }
+
+    // GPS verification for check-in
+    if (info.next === 'checked_in' && !isAdmin) {
+      handleCheckInWithGPS(trip);
       return;
     }
 
@@ -591,6 +673,18 @@ export default function JobOverviewScreen({ route, navigation }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Signature modal */}
+      <Modal visible={showSignature} animationType="slide" transparent onRequestClose={() => { setShowSignature(false); setPendingApprovalTrip(null); }}>
+        <View style={styles.sigOverlay}>
+          <View style={styles.sigSheet}>
+            <SignaturePad
+              onConfirm={handleSignatureConfirm}
+              onCancel={() => { setShowSignature(false); setPendingApprovalTrip(null); }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -696,6 +790,17 @@ const styles = StyleSheet.create({
   tripStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   tripStatusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   tripActions: { flexDirection: 'row', gap: 12 },
+  sigOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  sigSheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+  },
   approvalBanner: {
     backgroundColor: '#fffbeb',
     borderRadius: 12,
