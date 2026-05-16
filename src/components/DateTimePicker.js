@@ -105,7 +105,7 @@ export default function DateTimePickerField({
             display="spinner"
             onChange={handleChange}
             minimumDate={minimumDate}
-            style={{ width: '100%' }}
+            style={{ width: '100%', height: 216, backgroundColor: Colors.white }}
           />
         </View>
       </Modal>
