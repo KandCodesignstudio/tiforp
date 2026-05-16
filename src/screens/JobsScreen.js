@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator, RefreshControl, StatusBar, ScrollView, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -163,14 +163,16 @@ export default function JobsScreen({ navigation }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {isAdmin && (
             <>
-              <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} style={styles.logoutBtn}>
-                <Ionicons name="bar-chart-outline" size={22} color={Colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate('AddTechnician')} style={styles.logoutBtn}>
-                <Ionicons name="person-add-outline" size={22} color={Colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate('ImportJobs')} style={styles.logoutBtn}>
-                <Ionicons name="cloud-upload-outline" size={24} color={Colors.white} />
+              <TouchableOpacity
+                onPress={() => Alert.alert('Admin', null, [
+                  { text: 'Dashboard', onPress: () => navigation.navigate('Dashboard') },
+                  { text: 'Add Technician', onPress: () => navigation.navigate('AddTechnician') },
+                  { text: 'Import Jobs (CSV)', onPress: () => navigation.navigate('ImportJobs') },
+                  { text: 'Cancel', style: 'cancel' },
+                ])}
+                style={styles.logoutBtn}
+              >
+                <Ionicons name="ellipsis-horizontal" size={22} color={Colors.white} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate('CreateJob')} style={styles.logoutBtn}>
                 <Ionicons name="add-circle-outline" size={26} color={Colors.white} />
@@ -184,7 +186,7 @@ export default function JobsScreen({ navigation }) {
             }}
             style={styles.logoutBtn}
           >
-            <Ionicons name="search-outline" size={24} color={Colors.white} />
+            <Ionicons name={showSearch ? 'close-outline' : 'search-outline'} size={24} color={Colors.white} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Notifications')}

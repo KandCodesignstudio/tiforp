@@ -449,13 +449,13 @@ export default function JobOverviewScreen({ route, navigation }) {
                 {lastTripCompleted ? 'Technician paid for this job' : 'Available once last trip is completed'}
               </Text>
             </View>
-            <Switch
-              value={!!techPaid}
-              onValueChange={(v) => updatePayments(job.id, { techPaid: v })}
-              trackColor={{ false: Colors.lightGray, true: Colors.completed }}
-              disabled={!lastTripCompleted}
-              style={{ opacity: lastTripCompleted ? 1 : 0.4 }}
-            />
+            <View pointerEvents={lastTripCompleted ? 'auto' : 'none'} style={{ opacity: lastTripCompleted ? 1 : 0.35 }}>
+              <Switch
+                value={!!techPaid}
+                onValueChange={(v) => updatePayments(job.id, { techPaid: v })}
+                trackColor={{ false: Colors.lightGray, true: Colors.completed }}
+              />
+            </View>
           </View>
         </View>
       )}
