@@ -27,7 +27,7 @@ export default function SplashScreen() {
       <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
         <Text style={styles.brandSmall}>ITforP</Text>
         <Text style={styles.brandLarge}>CORE</Text>
-        <Text style={styles.tagline}>Technician Field Operations</Text>
+        <Text style={styles.tagline}>Centralized Operations & Resource Engine</Text>
       </Animated.View>
     </View>
   );
