@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch, ActivityIndicator,
   Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl,
@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotes } from '../hooks/useNotes';
 import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
-import { TabActions } from '@react-navigation/native';
+import { TabActions, useFocusEffect } from '@react-navigation/native';
 import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 import { supabase } from '../config/supabase';
 import DateTimePickerField from '../components/DateTimePicker';
@@ -93,7 +93,14 @@ export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
   const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
-  const { notes } = useNotes(jobId);
+  const { notes, refresh: refreshNotes } = useNotes(jobId);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+      refreshNotes();
+    }, [jobId])
+  );
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
   const [newTripScope, setNewTripScope] = useState('');
@@ -702,7 +709,7 @@ export default function JobOverviewScreen({ route, navigation }) {
       </Modal>
 
       {/* Signature modal */}
-      <Modal visible={showSignature} animationType="slide" transparent onRequestClose={() => { setShowSignature(false); setPendingApprovalTrip(null); }}>
+      <Modal visible={showSignature} animationType="fade" transparent onRequestClose={() => { setShowSignature(false); setPendingApprovalTrip(null); }}>
         <View style={styles.sigOverlay}>
           <View style={styles.sigSheet}>
             <SignaturePad

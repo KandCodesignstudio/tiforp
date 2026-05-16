@@ -68,21 +68,19 @@ export default function SignaturePad({ onConfirm, onCancel }) {
         {isEmpty && (
           <Text style={styles.placeholder}>Sign here</Text>
         )}
-        {layout && (
-          <Svg width={canvasW} height={canvasH} style={StyleSheet.absoluteFill}>
-            {strokes.map((pts, i) => (
-              <Path
-                key={i}
-                d={pointsToPath(pts)}
-                stroke="#1A3A6B"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            ))}
-          </Svg>
-        )}
+        <Svg width={canvasW} height={canvasH} style={StyleSheet.absoluteFill}>
+          {strokes.map((pts, i) => (
+            <Path
+              key={i}
+              d={pointsToPath(pts)}
+              stroke="#1A3A6B"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          ))}
+        </Svg>
       </View>
 
       <View style={styles.btnRow}>
