@@ -139,7 +139,7 @@ export default function AttachmentsScreen({ route, navigation }) {
   );
 
   const filteredAttachments = attachments.filter(
-    (a) => (a.tripNumber ?? 1) === selectedTrip
+    (a) => (a.tripNumber ?? 1) === selectedTrip && a.type !== 'signature'
   );
 
   const addAttachment = async (file) => {

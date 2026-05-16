@@ -92,7 +92,7 @@ function MapWithPin({ address }) {
 export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { notes } = useNotes(jobId);
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
@@ -262,22 +262,25 @@ export default function JobOverviewScreen({ route, navigation }) {
     }
   };
 
-  const handleSignatureConfirm = async (svgPathData) => {
+  const handleSignatureConfirm = async (svgPathData, canvasW, canvasH) => {
     setShowSignature(false);
     const trip = pendingApprovalTrip;
     setPendingApprovalTrip(null);
     if (!trip) return;
 
-    // Save signature as a special attachment entry
     const sigAttachment = {
       id: `sig_${Date.now()}`,
       type: 'signature',
       tripNumber: trip.tripNumber,
       svgPath: svgPathData,
+      canvasW: canvasW ?? 300,
+      canvasH: canvasH ?? 180,
       name: 'Client Signature',
       createdAt: new Date().toISOString(),
     };
     const updatedAttachments = [...(job.attachments ?? []), sigAttachment];
+    // Optimistic local update so PDF export sees the signature immediately
+    updateAttachments(job.id, updatedAttachments);
     await supabase.from('jobs').update({ attachments: updatedAttachments }).eq('id', job.id);
     updateTripStatus(job.id, trip.id, 'pending_approval');
   };

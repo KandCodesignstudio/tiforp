@@ -41,8 +41,8 @@ export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
   const signatures = (attachments ?? []).filter((a) => a.type === 'signature');
   const latestSig = signatures.length > 0 ? signatures[signatures.length - 1] : null;
   const clientSigHTML = latestSig
-    ? `<div class="sig-line" style="display:flex;align-items:flex-end;">
-        <svg viewBox="0 0 400 180" width="100%" height="56" style="display:block;">
+    ? `<div class="sig-line" style="display:flex;align-items:flex-end;padding:4px 0;">
+        <svg viewBox="0 0 ${latestSig.canvasW ?? 300} ${latestSig.canvasH ?? 180}" width="100%" height="60" preserveAspectRatio="xMinYMin meet" style="display:block;">
           <path d="${latestSig.svgPath}" stroke="#1A3A6B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </svg>
        </div>`

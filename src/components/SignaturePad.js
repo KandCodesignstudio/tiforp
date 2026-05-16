@@ -47,9 +47,8 @@ export default function SignaturePad({ onConfirm, onCancel }) {
 
   const handleConfirm = () => {
     if (strokes.length === 0 || strokes.every((s) => s.length < 2)) return;
-    // Build SVG path data string from all strokes
     const pathData = strokes.map(pointsToPath).filter(Boolean).join(' ');
-    onConfirm(pathData);
+    onConfirm(pathData, canvasW, canvasH);
   };
 
   const isEmpty = strokes.length === 0 || strokes.every((s) => s.length < 2);

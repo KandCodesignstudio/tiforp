@@ -196,5 +196,9 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     await supabase.from('jobs').update({ trips: remaining, status: newJobStatus, next_trip: nextTripIso }).eq('id', jobId);
   };
 
-  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, refresh: fetchJobs };
+  const updateAttachments = (jobId, attachments) => {
+    setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, attachments } : j));
+  };
+
+  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, refresh: fetchJobs };
 }
