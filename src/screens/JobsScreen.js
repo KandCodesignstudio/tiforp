@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator, RefreshControl, StatusBar, ScrollView, TextInput,
@@ -88,11 +88,21 @@ export default function JobsScreen({ navigation }) {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [techFilter, setTechFilter] = useState('all');
 
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || (user?.email?.split('@')[0]) || 'there';
   const [motivationalMessage, setMotivationalMessage] = useState(() => getRandomMessage());
 
   const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
+
+  const techNames = useMemo(() => {
+    const names = new Set();
+    for (const j of jobs) {
+      const n = j.technicianName?.trim() || j.client?.technicianName?.trim();
+      if (n) names.add(n);
+    }
+    return ['all', ...Array.from(names).sort()];
+  }, [jobs]);
 
   const filteredJobs = jobs.filter((j) => {
     const matchesFilter = (() => {
@@ -101,6 +111,10 @@ export default function JobsScreen({ navigation }) {
       return j.status === filter;
     })();
     if (!matchesFilter) return false;
+    if (techFilter !== 'all') {
+      const name = j.technicianName?.trim() ?? '';
+      if (name !== techFilter) return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       return (
@@ -173,6 +187,9 @@ export default function JobsScreen({ navigation }) {
                 style={styles.logoutBtn}
               >
                 <Ionicons name="ellipsis-horizontal" size={22} color={Colors.white} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Calendar')} style={styles.logoutBtn}>
+                <Ionicons name="calendar-outline" size={22} color={Colors.white} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate('CreateJob')} style={styles.logoutBtn}>
                 <Ionicons name="add-circle-outline" size={26} color={Colors.white} />
@@ -251,6 +268,30 @@ export default function JobsScreen({ navigation }) {
           );
         })}
       </ScrollView>
+
+      {isAdmin && techNames.length > 2 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.techFilterScroll}
+          contentContainerStyle={styles.filterRow}
+        >
+          {techNames.map((name) => {
+            const active = techFilter === name;
+            return (
+              <TouchableOpacity
+                key={name}
+                style={[styles.filterChip, active && styles.filterChipActive, styles.techChip]}
+                onPress={() => setTechFilter(name)}
+              >
+                <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                  {name === 'all' ? 'All Techs' : name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {loading ? (
         <ActivityIndicator style={styles.loader} size="large" color={Colors.accent} />
@@ -356,6 +397,13 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   emptyText: { textAlign: 'center', color: Colors.gray, marginTop: 40, fontSize: 15 },
+  techFilterScroll: {
+    backgroundColor: Colors.primary + 'CC',
+    maxHeight: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  techChip: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)' },
   filterScroll: {
     flexGrow: 0,
     flexShrink: 0,

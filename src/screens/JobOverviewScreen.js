@@ -372,6 +372,16 @@ export default function JobOverviewScreen({ route, navigation }) {
         <Text style={[styles.jobStatusBannerText, { color: jobStatusInfo.color }]}>{jobStatusInfo.label}</Text>
       </View>
 
+      {isAdmin && (
+        <TouchableOpacity
+          style={styles.exportBtn}
+          onPress={() => navigation.navigate('EditJob', { job })}
+        >
+          <Ionicons name="create-outline" size={18} color={Colors.accent} />
+          <Text style={styles.exportBtnText}>Edit Job</Text>
+        </TouchableOpacity>
+      )}
+
       <MapWithPin address={client?.address} />
 
       <View style={styles.card}>

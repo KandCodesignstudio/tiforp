@@ -71,6 +71,19 @@ export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
           </div>`).join('')
       : '<p class="empty">No notes for this trip.</p>';
 
+    const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'heic', 'gif', 'webp']);
+    const tripPhotos = (attachments ?? []).filter((a) => {
+      if (a.type === 'signature' || !a.url) return false;
+      const ext = (a.name ?? '').split('.').pop().toLowerCase();
+      return IMAGE_EXTS.has(ext);
+    }).filter((a) => (a.tripNumber ?? 1) === trip.tripNumber);
+
+    const photosHTML = tripPhotos.length
+      ? `<div class="photos-grid">${tripPhotos.map((a) =>
+          `<img src="${a.url}" class="photo-thumb" alt="${a.name ?? 'photo'}" />`
+        ).join('')}</div>`
+      : '';
+
     return `
       <div class="trip-card">
         <div class="trip-header">
@@ -85,6 +98,7 @@ export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
         <ul class="scope-list">${scopeLines}</ul>` : ''}
         <p class="sub-label">Notes</p>
         <div class="notes-block">${notesHTML}</div>
+        ${photosHTML ? `<p class="sub-label">Photos</p>${photosHTML}` : ''}
       </div>`;
   }).join('');
 
@@ -131,6 +145,10 @@ export function generateWorkOrderHTML(job, notes = [], logoBase64 = null) {
   .note-text { font-size: 12px; color: #374151; line-height: 1.5; }
   .note-meta { font-size: 10px; color: #9BA5B4; margin-top: 3px; }
   .empty { font-size: 12px; color: #9BA5B4; font-style: italic; }
+
+  /* Photos */
+  .photos-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .photo-thumb { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #E8ECF2; }
 
   /* Signature */
   .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 8px; }

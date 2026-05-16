@@ -16,6 +16,8 @@ import ImportJobsScreen from '../screens/ImportJobsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import AddTechnicianScreen from '../screens/AddTechnicianScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import EditJobScreen from '../screens/EditJobScreen';
+import CalendarScreen from '../screens/CalendarScreen';
 import { Colors } from '../utils/colors';
 
 const Stack = createNativeStackNavigator();
@@ -79,6 +81,16 @@ function MainStack() {
       <Stack.Screen
         name="Dashboard"
         component={DashboardScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="EditJob"
+        component={EditJobScreen}
+        options={{ title: 'Edit Job' }}
+      />
+      <Stack.Screen
+        name="Calendar"
+        component={CalendarScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
