@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -28,12 +29,18 @@ function formatDay(ts) {
 export default function ChatScreen({ route }) {
   const { jobId } = route.params;
   const { user, profile, isAdmin } = useAuth();
-  const { messages, loading, sendMessage } = useJobChat(jobId);
+  const { messages, loading, sendMessage, refresh } = useJobChat(jobId);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const listRef = useRef(null);
 
   const senderName = profile?.full_name || user?.email || (isAdmin ? 'Admin' : 'Technician');
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    Promise.resolve(refresh()).finally(() => setRefreshing(false));
+  };
 
   const handleSend = async () => {
     const msg = text.trim();
@@ -106,6 +113,9 @@ export default function ChatScreen({ route }) {
           contentContainerStyle={styles.list}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
+          }
         />
       )}
 

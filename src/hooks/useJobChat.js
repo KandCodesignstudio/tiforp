@@ -45,5 +45,13 @@ export function useJobChat(jobId) {
     if (error) throw error;
   };
 
-  return { messages, loading, sendMessage };
+  const refresh = () =>
+    supabase
+      .from('job_messages')
+      .select('*')
+      .eq('job_id', jobId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => setMessages(data ?? []));
+
+  return { messages, loading, sendMessage, refresh };
 }
