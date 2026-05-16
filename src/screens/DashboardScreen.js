@@ -60,9 +60,10 @@ export default function DashboardScreen({ navigation }) {
     const active = jobs.filter((j) => j.status === 'in_progress' || j.status === 'needs_followup').length;
     const pendingApproval = jobs.filter((j) => j.status === 'pending_approval').length;
     const completed = jobs.filter((j) => j.status === 'completed').length;
+    const closed = jobs.filter((j) => j.status === 'closed').length;
     const unpaid = jobs.filter((j) => j.status === 'completed' && (!j.clientPaid || !j.techPaid)).length;
     const thisMonth = jobs.filter((j) => isThisMonth(j.createdAt)).length;
-    return { total, active, pendingApproval, completed, unpaid, thisMonth };
+    return { total, active, pendingApproval, completed, closed, unpaid, thisMonth };
   }, [jobs]);
 
   const topTechs = useMemo(() => {
@@ -114,6 +115,7 @@ export default function DashboardScreen({ navigation }) {
             <StatCard label="Active" value={stats.active} color="#F97316" iconName="flash-outline" />
             <StatCard label="Pending Approval" value={stats.pendingApproval} color={Colors.warning} iconName="hourglass-outline" />
             <StatCard label="Completed" value={stats.completed} color={Colors.completed} iconName="checkmark-circle-outline" />
+            <StatCard label="Closed" value={stats.closed} color={Colors.gray} iconName="lock-closed-outline" />
             <StatCard label="Unpaid" value={stats.unpaid} color={Colors.danger} iconName="card-outline" />
             <StatCard label="This Month" value={stats.thisMonth} color="#8B5CF6" iconName="calendar-outline" />
           </View>
