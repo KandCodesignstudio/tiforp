@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, PanResponder, Platform,
+  View, Text, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../utils/colors';
@@ -16,44 +16,59 @@ function pointsToPath(points) {
 
 export default function SignaturePad({ onConfirm, onCancel }) {
   const [strokes, setStrokes] = useState([]);
-  const currentStroke = useRef([]);
-  const containerRef = useRef(null);
   const [layout, setLayout] = useState(null);
+  const canvasRef = useRef(null);
+  const canvasOrigin = useRef({ x: 0, y: 0 });
+  const activeStroke = useRef([]);
+  const isDrawing = useRef(false);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (e) => {
-        const { locationX, locationY } = e.nativeEvent;
-        currentStroke.current = [{ x: locationX, y: locationY }];
-        setStrokes((prev) => [...prev, [...currentStroke.current]]);
-      },
-      onPanResponderMove: (e) => {
-        const { locationX, locationY } = e.nativeEvent;
-        currentStroke.current = [...currentStroke.current, { x: locationX, y: locationY }];
-        setStrokes((prev) => [...prev.slice(0, -1), [...currentStroke.current]]);
-      },
-      onPanResponderRelease: () => {
-        currentStroke.current = [];
-      },
-    })
-  ).current;
+  const canvasH = layout?.height ?? 180;
+  const canvasW = layout?.width ?? 300;
+
+  const measureCanvas = () => {
+    canvasRef.current?.measure((_fx, _fy, _w, _h, px, py) => {
+      canvasOrigin.current = { x: px, y: py };
+    });
+  };
+
+  const handleTouchStart = (e) => {
+    measureCanvas();
+    const touch = e.nativeEvent.touches[0];
+    const x = touch.pageX - canvasOrigin.current.x;
+    const y = touch.pageY - canvasOrigin.current.y;
+    activeStroke.current = [{ x, y }];
+    isDrawing.current = true;
+    setStrokes((prev) => [...prev, [{ x, y }]]);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDrawing.current) return;
+    const touch = e.nativeEvent.touches[0];
+    const x = touch.pageX - canvasOrigin.current.x;
+    const y = touch.pageY - canvasOrigin.current.y;
+    activeStroke.current = [...activeStroke.current, { x, y }];
+    const snap = [...activeStroke.current];
+    setStrokes((prev) => [...prev.slice(0, -1), snap]);
+  };
+
+  const handleTouchEnd = () => {
+    isDrawing.current = false;
+  };
 
   const handleClear = () => {
     setStrokes([]);
-    currentStroke.current = [];
+    activeStroke.current = [];
+    isDrawing.current = false;
   };
 
   const handleConfirm = () => {
-    if (strokes.length === 0 || strokes.every((s) => s.length < 2)) return;
-    const pathData = strokes.map(pointsToPath).filter(Boolean).join(' ');
+    const validStrokes = strokes.filter((s) => s.length >= 2);
+    if (validStrokes.length === 0) return;
+    const pathData = validStrokes.map(pointsToPath).join(' ');
     onConfirm(pathData, canvasW, canvasH);
   };
 
-  const isEmpty = strokes.length === 0 || strokes.every((s) => s.length < 2);
-  const canvasH = layout?.height ?? 180;
-  const canvasW = layout?.width ?? 300;
+  const isEmpty = strokes.every((s) => s.length < 2);
 
   return (
     <View style={styles.container}>
@@ -61,9 +76,18 @@ export default function SignaturePad({ onConfirm, onCancel }) {
       <Text style={styles.subtitle}>Please sign in the box below</Text>
 
       <View
+        ref={canvasRef}
         style={styles.canvas}
-        onLayout={(e) => setLayout(e.nativeEvent.layout)}
-        {...panResponder.panHandlers}
+        onLayout={(e) => {
+          setLayout(e.nativeEvent.layout);
+          setTimeout(measureCanvas, 50);
+        }}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={handleTouchStart}
+        onResponderMove={handleTouchMove}
+        onResponderRelease={handleTouchEnd}
+        onResponderTerminate={handleTouchEnd}
       >
         {isEmpty && (
           <Text style={styles.placeholder}>Sign here</Text>
@@ -117,32 +141,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeholder: { fontSize: 14, color: Colors.lightGray, fontStyle: 'italic', pointerEvents: 'none' },
+  placeholder: { fontSize: 14, color: Colors.lightGray, fontStyle: 'italic' },
   btnRow: { flexDirection: 'row', gap: 10 },
   clearBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.lightGray,
-    alignItems: 'center',
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1.5, borderColor: Colors.lightGray, alignItems: 'center',
   },
   clearBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textLight },
   cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.danger,
-    alignItems: 'center',
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1.5, borderColor: Colors.danger, alignItems: 'center',
   },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: Colors.danger },
   confirmBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: Colors.accent, alignItems: 'center',
   },
   confirmBtnDisabled: { backgroundColor: Colors.lightGray },
   confirmBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },

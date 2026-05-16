@@ -309,10 +309,12 @@ export default function JobOverviewScreen({ route, navigation }) {
       return;
     }
 
-    // Tech at checked_out → submit for approval or for return
+    // Tech at checked_out → check notes/attachments then submit
     if (trip.status === 'checked_out' && !isAdmin) {
       const tripNotes = notes.filter((n) => n.tripNumber === trip.tripNumber);
-      const tripAttachments = (job.attachments ?? []).filter((a) => (a.tripNumber ?? 1) === trip.tripNumber);
+      const tripAttachments = (job.attachments ?? []).filter(
+        (a) => (a.tripNumber ?? 1) === trip.tripNumber && a.type !== 'signature'
+      );
       const hasNotes = tripNotes.length > 0;
       const hasAttachments = tripAttachments.length > 0;
 
@@ -329,15 +331,7 @@ export default function JobOverviewScreen({ route, navigation }) {
         return;
       }
 
-      Alert.alert(
-        'Finish Trip',
-        'How is this trip ending?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'For Return', onPress: () => updateTripStatus(job.id, trip.id, 'for_return') },
-          { text: 'Submit for Approval', onPress: () => { setPendingApprovalTrip(trip); setShowSignature(true); } },
-        ]
-      );
+      updateTripStatus(job.id, trip.id, 'pending_approval');
       return;
     }
 
@@ -451,6 +445,17 @@ export default function JobOverviewScreen({ route, navigation }) {
               onPress={() => handleAdvanceStatus(activeTrip)}
             >
               <Text style={styles.actionBtnText}>{getTripStatus(activeTrip.status).nextLabel}</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Client signature button — shown at checked_out before submitting */}
+          {!isAdmin && activeTrip.status === 'checked_out' && (
+            <TouchableOpacity
+              style={styles.sigBtn}
+              onPress={() => { setPendingApprovalTrip(activeTrip); setShowSignature(true); }}
+            >
+              <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
+              <Text style={styles.sigBtnText}>Get Client Signature</Text>
             </TouchableOpacity>
           )}
 
@@ -836,6 +841,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   exportBtnText: { fontSize: 14, fontWeight: '700', color: Colors.accent },
+  sigBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  sigBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
   closeJobBtn: {
     flexDirection: 'row',
     alignItems: 'center',
