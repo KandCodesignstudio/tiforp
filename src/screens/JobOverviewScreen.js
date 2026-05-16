@@ -388,6 +388,32 @@ export default function JobOverviewScreen({ route, navigation }) {
         <Text style={styles.description}>{description}</Text>
       </View>
 
+      {/* Pending approval — tech view with undo option */}
+      {!isAdmin && pendingTrips.length > 0 && pendingTrips.map((trip) => (
+        <View key={trip.id} style={styles.approvalBanner}>
+          <View style={styles.approvalBannerLeft}>
+            <Ionicons name="time-outline" size={20} color="#92400e" />
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.approvalBannerTitle}>Trip {trip.tripNumber} — Awaiting Admin Approval</Text>
+              <Text style={styles.approvalBannerSub}>Submitted. An admin will review and approve.</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.approvalBtn, { backgroundColor: Colors.gray }]}
+            onPress={() => Alert.alert(
+              'Undo Submission',
+              'Take this trip back to "Checked Out"? You can make changes and resubmit.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Undo', onPress: () => updateTripStatus(job.id, trip.id, 'checked_out') },
+              ]
+            )}
+          >
+            <Text style={styles.approvalBtnText}>Undo</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+
       {/* Pending approval banner — admin only */}
       {isAdmin && pendingTrips.length > 0 && pendingTrips.map((trip) => (
         <View key={trip.id} style={styles.approvalBanner}>
@@ -435,6 +461,27 @@ export default function JobOverviewScreen({ route, navigation }) {
               onPress={() => updateTripStatus(job.id, activeTrip.id, 'for_return')}
             >
               <Text style={styles.linkBtnText}>Mark as For Return instead</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Undo last status — tech only, when a previous status exists */}
+          {!isAdmin && getTripStatus(activeTrip.status).prev && (
+            <TouchableOpacity
+              style={styles.linkBtn}
+              onPress={() => {
+                const prevStatus = getTripStatus(activeTrip.status).prev;
+                const prevLabel = getTripStatus(prevStatus).label;
+                Alert.alert(
+                  'Undo Status',
+                  `Revert this trip back to "${prevLabel}"?`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Undo', onPress: () => updateTripStatus(job.id, activeTrip.id, prevStatus) },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.linkBtnText}>↩ Undo — go back to previous status</Text>
             </TouchableOpacity>
           )}
         </View>

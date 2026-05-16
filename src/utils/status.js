@@ -1,13 +1,13 @@
 import { Colors } from './colors';
 
 export const TRIP_STATUSES = {
-  scheduled:        { label: 'SCHEDULED',        color: Colors.gray,       next: 'en_route',         nextLabel: 'On My Way' },
-  en_route:         { label: 'EN ROUTE',         color: Colors.warning,    next: 'checked_in',       nextLabel: 'Check In' },
-  checked_in:       { label: 'CHECKED IN',       color: Colors.accent,     next: 'checked_out',      nextLabel: 'Check Out' },
-  checked_out:      { label: 'CHECKED OUT',      color: Colors.primary,    next: 'pending_approval', nextLabel: 'Submit for Approval' },
-  pending_approval: { label: 'PENDING APPROVAL', color: '#f59e0b',         next: 'completed',        nextLabel: 'Approve Completion' },
-  completed:        { label: 'COMPLETED',        color: Colors.completed,  next: null,               nextLabel: null },
-  for_return:       { label: 'FOR RETURN',       color: Colors.danger,     next: null,               nextLabel: null },
+  scheduled:        { label: 'SCHEDULED',        color: Colors.gray,       next: 'en_route',         nextLabel: 'On My Way',             prev: null },
+  en_route:         { label: 'EN ROUTE',         color: Colors.warning,    next: 'checked_in',       nextLabel: 'Check In',              prev: 'scheduled' },
+  checked_in:       { label: 'CHECKED IN',       color: Colors.accent,     next: 'checked_out',      nextLabel: 'Check Out',             prev: 'en_route' },
+  checked_out:      { label: 'CHECKED OUT',      color: Colors.primary,    next: 'pending_approval', nextLabel: 'Submit for Approval',   prev: 'checked_in' },
+  pending_approval: { label: 'PENDING APPROVAL', color: '#f59e0b',         next: 'completed',        nextLabel: 'Approve Completion',    prev: 'checked_out' },
+  completed:        { label: 'COMPLETED',        color: Colors.completed,  next: null,               nextLabel: null,                   prev: null },
+  for_return:       { label: 'FOR RETURN',       color: Colors.danger,     next: null,               nextLabel: null,                   prev: null },
 };
 
 export const JOB_STATUSES = {
