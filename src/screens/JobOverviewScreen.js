@@ -522,12 +522,29 @@ export default function JobOverviewScreen({ route, navigation }) {
               <Text style={styles.approvalBannerSub}>Review notes and photos before approving.</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.approvalBtn}
-            onPress={() => handleAdvanceStatus(trip)}
-          >
-            <Text style={styles.approvalBtnText}>Approve</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.sendBackBtn}
+              onPress={() =>
+                Alert.alert(
+                  'Send Back to Tech',
+                  `Send Trip ${trip.tripNumber} back to the technician for corrections?`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Send Back', style: 'destructive', onPress: () => updateTripStatus(job.id, trip.id, 'checked_out') },
+                  ]
+                )
+              }
+            >
+              <Text style={styles.sendBackBtnText}>Send Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.approvalBtn}
+              onPress={() => handleAdvanceStatus(trip)}
+            >
+              <Text style={styles.approvalBtnText}>Approve</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ))}
 
@@ -1201,9 +1218,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    marginLeft: 10,
   },
   approvalBtnText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
+  sendBackBtn: {
+    backgroundColor: '#ef4444',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  sendBackBtnText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
   addTripBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 13,
