@@ -693,15 +693,15 @@ export default function JobOverviewScreen({ route, navigation }) {
 
       <Modal
         visible={showAddTrip}
-        transparent
         animationType="slide"
+        presentationStyle="pageSheet"
         onRequestClose={() => setShowAddTrip(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.pageSheetWrap}
         >
-          <View style={styles.modalCard}>
+          <View style={styles.pageSheetCard}>
             <Text style={styles.modalTitle}>Schedule Next Trip</Text>
             <Text style={styles.modalSubtitle}>Trip #{(trips?.length ?? 0) + 1}</Text>
 
@@ -1062,9 +1062,9 @@ export default function JobOverviewScreen({ route, navigation }) {
       </View>
 
       {/* Edit trip modal */}
-      <Modal visible={!!editingTrip} transparent animationType="fade" onRequestClose={() => setEditingTrip(null)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+      <Modal visible={!!editingTrip} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditingTrip(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.pageSheetWrap}>
+          <View style={styles.pageSheetCard}>
             <Text style={styles.modalTitle}>Edit Trip {editingTrip?.tripNumber}</Text>
 
             <Text style={styles.modalLabel}>Scheduled Date & Time</Text>
@@ -1474,6 +1474,12 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: Colors.white, borderRadius: 14, padding: 20, width: '100%',
+  },
+  pageSheetWrap: {
+    flex: 1, backgroundColor: Colors.screenBg,
+  },
+  pageSheetCard: {
+    backgroundColor: Colors.screenBg, flex: 1, padding: 20,
   },
   modalTitle: { fontSize: 17, fontWeight: '800', color: Colors.text },
   modalSubtitle: { fontSize: 12, color: Colors.textLight, marginTop: 2, marginBottom: 16 },
