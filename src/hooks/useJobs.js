@@ -101,6 +101,15 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
         { jobId }
       ).catch(() => {});
     }
+
+    if (isAdmin && newStatus === 'checked_out') {
+      notifyUser(
+        job.technicianId,
+        'Trip Sent Back for Corrections',
+        `Admin returned Trip on job ${job.jobNumber ?? jobId} for corrections. Please review and resubmit.`,
+        { jobId }
+      ).catch(() => {});
+    }
   };
 
   const updatePayments = async (jobId, { clientPaid, techPaid }) => {
