@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch, ActivityIndicator,
   Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl,
@@ -106,19 +106,15 @@ export default function JobOverviewScreen({ route, navigation }) {
   const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { notes, refresh: refreshNotes } = useNotes(jobId);
   const [jobReview, setJobReview] = useState(null);
+  const [focusTick, setFocusTick] = useState(0);
 
-  // Use refs so the focus callback always calls the latest version
-  const refreshRef = useRef(refresh);
-  const refreshNotesRef = useRef(refreshNotes);
-  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
-  useEffect(() => { refreshNotesRef.current = refreshNotes; }, [refreshNotes]);
+  useFocusEffect(useCallback(() => { setFocusTick((t) => t + 1); }, []));
 
-  useFocusEffect(
-    useCallback(() => {
-      refreshRef.current();
-      refreshNotesRef.current();
-    }, [jobId])
-  );
+  useEffect(() => {
+    if (focusTick === 0) return;
+    refresh();
+    refreshNotes();
+  }, [focusTick]);
 
   useEffect(() => {
     supabase.from('tech_reviews').select('*').eq('job_id', jobId).maybeSingle()
@@ -331,7 +327,7 @@ export default function JobOverviewScreen({ route, navigation }) {
     await supabase.from('jobs').update({ attachments: updatedAttachments }).eq('id', job.id);
   };
 
-  const handleAdvanceStatus = (trip) => {
+  const handleAdvanceStatus = async (trip) => {
     const info = getTripStatus(trip.status);
     if (!info.next) return;
 
@@ -348,14 +344,18 @@ export default function JobOverviewScreen({ route, navigation }) {
       return;
     }
 
-    // Tech at checked_out → check notes/attachments then submit
+    // Tech at checked_out → live DB check then submit
     if (trip.status === 'checked_out' && !isAdmin) {
-      const tripNotes = notes.filter((n) => n.tripNumber === trip.tripNumber);
+      const { data: freshNotes } = await supabase
+        .from('notes').select('id').eq('job_id', jobId).eq('trip_number', trip.tripNumber);
       const tripAttachments = (job.attachments ?? []).filter(
         (a) => (a.tripNumber ?? 1) === trip.tripNumber && a.type !== 'signature'
       );
-      const hasNotes = tripNotes.length > 0;
+      const hasNotes = (freshNotes ?? []).length > 0;
       const hasAttachments = tripAttachments.length > 0;
+
+      // Sync the local notes state so the checklist updates immediately
+      refreshNotes();
 
       if (!hasNotes || !hasAttachments) {
         const missing = [
