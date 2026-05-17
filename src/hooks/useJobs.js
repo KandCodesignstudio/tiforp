@@ -67,7 +67,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
         status: newStatus,
         scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt,
         checkedInAt: newStatus === 'checked_in' ? nowIso : (t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null),
-        checkedOutAt: (newStatus === 'checked_out' && t.status === 'checked_in') ? nowIso : (t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null),
+        checkedOutAt: (newStatus === 'checked_out' && !t.checkedOutAt) ? nowIso : (t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null),
       };
     });
     const newJobStatus = rollupJobStatus(updatedTrips);
