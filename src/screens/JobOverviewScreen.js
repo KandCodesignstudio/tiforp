@@ -20,6 +20,7 @@ import { TabActions, useFocusEffect } from '@react-navigation/native';
 import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 import { supabase } from '../config/supabase';
 import DateTimePickerField from '../components/DateTimePicker';
+import { submitReview } from '../hooks/useTechReviews';
 
 function MapWithPin({ address }) {
   const [coords, setCoords] = useState(null);
@@ -113,6 +114,10 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [savingEdit, setSavingEdit] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [pendingApprovalTrip, setPendingApprovalTrip] = useState(null);
+  const [showReview, setShowReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [savingReview, setSavingReview] = useState(false);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -701,7 +706,14 @@ export default function JobOverviewScreen({ route, navigation }) {
                 {
                   text: 'Close Job',
                   style: 'destructive',
-                  onPress: () => closeJob(job.id),
+                  onPress: async () => {
+                    await closeJob(job.id);
+                    if (job.technicianId || job.technicianName) {
+                      setReviewRating(0);
+                      setReviewComment('');
+                      setShowReview(true);
+                    }
+                  },
                 },
               ]
             );
@@ -830,6 +842,75 @@ export default function JobOverviewScreen({ route, navigation }) {
             />
           </View>
         </View>
+      </Modal>
+
+      {/* Tech review modal */}
+      <Modal visible={showReview} animationType="fade" transparent onRequestClose={() => setShowReview(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.reviewModal}>
+            <Text style={styles.reviewModalTitle}>Rate Technician</Text>
+            <Text style={styles.reviewModalSub}>
+              {job.technicianName ?? 'the technician'} · Job {jobNumber}
+            </Text>
+
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setReviewRating(star)} hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}>
+                  <Ionicons
+                    name={star <= reviewRating ? 'star' : 'star-outline'}
+                    size={38}
+                    color={star <= reviewRating ? '#F59E0B' : Colors.lightGray}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.reviewInput}
+              value={reviewComment}
+              onChangeText={setReviewComment}
+              placeholder="Add a comment (optional)…"
+              placeholderTextColor={Colors.gray}
+              multiline
+              maxLength={500}
+            />
+
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowReview(false)}>
+                <Text style={styles.modalCancelText}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, reviewRating === 0 && { opacity: 0.4 }]}
+                disabled={reviewRating === 0 || savingReview}
+                onPress={async () => {
+                  if (reviewRating === 0) return;
+                  setSavingReview(true);
+                  try {
+                    await submitReview({
+                      jobId: job.id,
+                      technicianId: job.technicianId ?? null,
+                      technicianName: job.technicianName ?? null,
+                      rating: reviewRating,
+                      comment: reviewComment,
+                      reviewerName: profile?.full_name ?? user?.email ?? 'Admin',
+                      reviewerId: user?.id ?? null,
+                    });
+                    setShowReview(false);
+                  } catch (err) {
+                    Alert.alert('Error', err.message);
+                  } finally {
+                    setSavingReview(false);
+                  }
+                }}
+              >
+                {savingReview
+                  ? <ActivityIndicator color={Colors.white} />
+                  : <Text style={styles.modalSaveText}>Submit Review</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );
@@ -1050,4 +1131,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent, alignItems: 'center',
   },
   modalSaveText: { color: Colors.white, fontWeight: '700' },
+  reviewModal: {
+    backgroundColor: Colors.white, borderRadius: 18, padding: 24, width: '100%',
+    alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8,
+  },
+  reviewModalTitle: { fontSize: 20, fontWeight: '800', color: Colors.text, marginBottom: 4 },
+  reviewModalSub: { fontSize: 13, color: Colors.textLight, marginBottom: 20 },
+  starsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  reviewInput: {
+    width: '100%', backgroundColor: Colors.screenBg, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: Colors.text,
+    minHeight: 80, textAlignVertical: 'top', borderWidth: 1, borderColor: Colors.lightGray,
+    marginBottom: 20,
+  },
 });

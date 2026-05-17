@@ -36,10 +36,10 @@ function StatCard({ label, value, color, iconName }) {
   );
 }
 
-function TechRow({ name, count, index }) {
+function TechRow({ name, techId, count, onPress }) {
   const initial = (name ?? '?').charAt(0).toUpperCase();
   return (
-    <View style={styles.techRow}>
+    <TouchableOpacity style={styles.techRow} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.techAvatar}>
         <Text style={styles.techInitial}>{initial}</Text>
       </View>
@@ -47,7 +47,8 @@ function TechRow({ name, count, index }) {
       <View style={styles.techCountBadge}>
         <Text style={styles.techCountText}>{count}</Text>
       </View>
-    </View>
+      <Ionicons name="chevron-forward" size={16} color={Colors.gray} style={{ marginLeft: 4 }} />
+    </TouchableOpacity>
   );
 }
 
@@ -67,15 +68,18 @@ export default function DashboardScreen({ navigation }) {
   }, [jobs]);
 
   const topTechs = useMemo(() => {
-    const counts = {};
+    const map = {};
     for (const job of jobs) {
       const name = job.technicianName?.trim() || null;
       if (!name) continue;
-      counts[name] = (counts[name] ?? 0) + 1;
+      if (!map[name]) map[name] = { count: 0, technicianId: job.technicianId ?? null };
+      map[name].count += 1;
+      if (!map[name].technicianId && job.technicianId) map[name].technicianId = job.technicianId;
     }
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
+    return Object.entries(map)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 8)
+      .map(([name, { count, technicianId }]) => ({ name, count, technicianId }));
   }, [jobs]);
 
   const onRefresh = () => {
@@ -126,9 +130,14 @@ export default function DashboardScreen({ navigation }) {
             {topTechs.length === 0 ? (
               <Text style={styles.emptyText}>No technician data available.</Text>
             ) : (
-              topTechs.map(([name, count], index) => (
+              topTechs.map(({ name, count, technicianId }, index) => (
                 <React.Fragment key={name}>
-                  <TechRow name={name} count={count} index={index} />
+                  <TechRow
+                    name={name}
+                    techId={technicianId}
+                    count={count}
+                    onPress={() => navigation.navigate('TechProfile', { technicianId, technicianName: name })}
+                  />
                   {index < topTechs.length - 1 && <View style={styles.techDivider} />}
                 </React.Fragment>
               ))

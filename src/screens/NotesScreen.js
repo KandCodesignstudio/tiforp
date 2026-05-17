@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, Alert,
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Modal, RefreshControl, BackHandler,
@@ -12,13 +12,16 @@ import { useNotes } from '../hooks/useNotes';
 import { notifyAdmins } from '../utils/notifications';
 import { Colors } from '../utils/colors';
 
-function timeAgo(date) {
+function formatNoteTime(date) {
+  if (!date) return '';
   const d = date instanceof Date ? date : new Date(date);
   const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (diff < 60) return 'a few seconds ago';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const relative = diff < 60 ? 'Just now'
+    : diff < 3600 ? `${Math.floor(diff / 60)}m ago`
+    : diff < 86400 ? `${Math.floor(diff / 3600)}h ago`
+    : null;
+  const absolute = d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return relative ? `${relative} · ${absolute}` : absolute;
 }
 
 function formatTripDate(date) {
@@ -44,7 +47,7 @@ function NoteCard({ note, isOwner, onEdit, onDelete }) {
         )}
       </View>
       <Text style={styles.noteText}>{note.text}</Text>
-      <Text style={styles.noteTime}>{timeAgo(note.createdAt)}</Text>
+      <Text style={styles.noteTime}>{formatNoteTime(note.createdAt)}</Text>
     </View>
   );
 }
@@ -93,7 +96,24 @@ export default function NotesScreen({ route, navigation }) {
       return () => sub.remove();
     }, [route.params?.initialTripNumber])
   );
-  const filteredNotes = notes.filter((n) => n.tripNumber === selectedTrip);
+  const ALL_TRIPS = 0;
+
+  const filteredNotes = selectedTrip === ALL_TRIPS
+    ? notes
+    : notes.filter((n) => n.tripNumber === selectedTrip);
+
+  const groupedByTrip = useMemo(() => {
+    if (selectedTrip !== ALL_TRIPS) return null;
+    const groups = {};
+    for (const note of notes) {
+      const tn = note.tripNumber ?? 1;
+      if (!groups[tn]) groups[tn] = [];
+      groups[tn].push(note);
+    }
+    return Object.entries(groups)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([tn, tripNotes]) => ({ tripNumber: Number(tn), notes: tripNotes }));
+  }, [notes, selectedTrip]);
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -160,6 +180,14 @@ export default function NotesScreen({ route, navigation }) {
             style={styles.tabs}
             contentContainerStyle={styles.tabsContent}
           >
+            {isAdmin && (
+              <TouchableOpacity
+                style={[styles.tab, selectedTrip === ALL_TRIPS && styles.tabActive]}
+                onPress={() => setSelectedTrip(ALL_TRIPS)}
+              >
+                <Text style={[styles.tabText, selectedTrip === ALL_TRIPS && styles.tabTextActive]}>ALL TRIPS</Text>
+              </TouchableOpacity>
+            )}
             {trips.map((t) => (
               <TouchableOpacity
                 key={t.id}
@@ -174,27 +202,61 @@ export default function NotesScreen({ route, navigation }) {
           </ScrollView>
         )}
 
-        <FlatList
-          ref={listRef}
-          data={filteredNotes}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.notesList}
-          renderItem={({ item }) => (
-            <NoteCard
-              note={item}
-              isOwner={isNoteOwner(item)}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          )}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
-          }
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No notes for this trip yet.</Text>
-          }
-        />
+        {selectedTrip === ALL_TRIPS && groupedByTrip ? (
+          <ScrollView
+            ref={listRef}
+            contentContainerStyle={styles.notesList}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
+          >
+            {groupedByTrip.length === 0 ? (
+              <Text style={styles.emptyText}>No notes yet.</Text>
+            ) : groupedByTrip.map(({ tripNumber, notes: tripNotes }) => {
+              const tripObj = trips.find((t) => t.tripNumber === tripNumber);
+              const dateStr = tripObj?.scheduledAt ? formatTripDate(tripObj.scheduledAt) : '';
+              return (
+                <View key={tripNumber}>
+                  <View style={styles.tripGroupHeader}>
+                    <View style={styles.tripGroupDot} />
+                    <Text style={styles.tripGroupLabel}>
+                      TRIP {tripNumber}{dateStr ? `  ·  ${dateStr}` : ''}
+                    </Text>
+                  </View>
+                  {tripNotes.map((note) => (
+                    <NoteCard
+                      key={note.id}
+                      note={note}
+                      isOwner={isNoteOwner(note)}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </View>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={filteredNotes}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.notesList}
+            renderItem={({ item }) => (
+              <NoteCard
+                note={item}
+                isOwner={isNoteOwner(item)}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            )}
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
+            }
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No notes for this trip yet.</Text>
+            }
+          />
+        )}
 
         <View style={styles.inputRow}>
           <TextInput
@@ -281,6 +343,17 @@ const styles = StyleSheet.create({
   noteText: { fontSize: 14, color: Colors.text, lineHeight: 20 },
   noteTime: { fontSize: 11, color: Colors.gray, marginTop: 6, textAlign: 'right' },
   emptyText: { textAlign: 'center', color: Colors.gray, marginTop: 40, fontSize: 14 },
+  tripGroupHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 20, marginBottom: 10,
+  },
+  tripGroupDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary,
+  },
+  tripGroupLabel: {
+    fontSize: 11, fontWeight: '800', color: Colors.primary,
+    letterSpacing: 1.2, textTransform: 'uppercase',
+  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',

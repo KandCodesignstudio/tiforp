@@ -18,6 +18,7 @@ import AddTechnicianScreen from '../screens/AddTechnicianScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import EditJobScreen from '../screens/EditJobScreen';
 import CalendarScreen from '../screens/CalendarScreen';
+import TechProfileScreen from '../screens/TechProfileScreen';
 import { Colors } from '../utils/colors';
 
 const Stack = createNativeStackNavigator();
@@ -91,6 +92,11 @@ function MainStack() {
       <Stack.Screen
         name="Calendar"
         component={CalendarScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TechProfile"
+        component={TechProfileScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
