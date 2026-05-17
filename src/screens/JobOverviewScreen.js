@@ -127,7 +127,7 @@ export default function JobOverviewScreen({ route, navigation }) {
   const { user, isAdmin, profile } = useAuth();
   const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, adminRemoveTechFromTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { technicians } = useProfiles();
-  const { events: jobEvents } = useJobEvents(job?.id);
+  const { events: jobEvents } = useJobEvents(jobId);
   const { notes, refresh: refreshNotes } = useNotes(jobId);
   const [jobReview, setJobReview] = useState(null);
   const [focusTick, setFocusTick] = useState(0);
