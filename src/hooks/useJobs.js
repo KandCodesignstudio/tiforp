@@ -83,7 +83,8 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     await supabase.from('jobs').update({ trips: updatedTrips, status: newJobStatus }).eq('id', jobId);
 
     const actorName = userProfile?.full_name ?? (isAdmin ? 'Admin' : 'Technician');
-    const tripNum = job.trips.find((t) => t.id === tripId)?.tripNumber ?? '?';
+    const tripObj = job.trips.find((t) => t.id === tripId);
+    const tripNum = tripObj?.tripLabel ?? tripObj?.tripNumber ?? '?';
     const jobNum = job.jobNumber ?? jobId;
 
     if (!isAdmin) {
@@ -143,19 +144,22 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     await supabase.from('jobs').update(payload).eq('id', jobId);
   };
 
-  const addTrip = async (jobId, { scheduledAt, scopeOfWork }) => {
+  const addTrip = async (jobId, { scheduledAt, scopeOfWork, technicianId, technicianName, tripLabel } = {}) => {
     const job = jobs.find((j) => j.id === jobId);
     if (!job) return;
     const nextNumber = (job.trips?.length ?? 0) + 1;
     const newTrip = {
       id: `trip_${Date.now()}`,
       tripNumber: nextNumber,
+      tripLabel: tripLabel ?? String(nextNumber),
+      technicianId: technicianId !== undefined ? technicianId : (job.technicianId ?? null),
+      technicianName: technicianName !== undefined ? technicianName : (job.technicianName ?? null),
       status: 'scheduled',
       scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       scopeOfWork: (scopeOfWork ?? '').trim(),
     };
     const updatedTrips = [
-      ...job.trips.map((t) => ({ ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt })),
+      ...job.trips.map((t) => ({ ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt, checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null, checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null })),
       newTrip,
     ];
     const newJobStatus = rollupJobStatus(updatedTrips);
@@ -243,75 +247,130 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     logJobEvent(jobId, 'closed', 'Job closed', actorName).catch(() => {});
   };
 
+  const serializeTrip = (t) => ({
+    ...t,
+    scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
+    checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
+    checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+  });
+
+  const deserializeTrip = (t) => ({
+    ...t,
+    scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null,
+    checkedInAt: t.checkedInAt ? new Date(t.checkedInAt) : null,
+    checkedOutAt: t.checkedOutAt ? new Date(t.checkedOutAt) : null,
+  });
+
+  // Tech (or admin) removes a tech from a specific trip with a reason
+  const unassignTechFromTrip = async (jobId, tripId, reason, actorName = 'Technician') => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+
+    const trip = job.trips.find((t) => t.id === tripId);
+    const techName = trip?.technicianName ?? job.technicianName ?? 'Technician';
+    const tripLabel = trip?.tripLabel ?? String(trip?.tripNumber ?? '?');
+
+    const updatedTrips = job.trips.map((t) =>
+      t.id !== tripId ? serializeTrip(t) : {
+        ...serializeTrip(t),
+        technicianId: null,
+        technicianName: null,
+        unassignedReason: reason.trim(),
+        status: 'scheduled',
+        checkedInAt: null,
+        checkedOutAt: null,
+      }
+    );
+    const newJobStatus = rollupJobStatus(updatedTrips);
+
+    setJobs((prev) => prev.map((j) =>
+      j.id !== jobId ? j : {
+        ...j,
+        technicianId: null,
+        technicianName: null,
+        status: newJobStatus,
+        trips: updatedTrips.map(deserializeTrip),
+      }
+    ));
+
+    await supabase.from('jobs').update({
+      technician_id: null,
+      metadata: { ...(job.metadata ?? {}), technicianName: null },
+      trips: updatedTrips,
+      status: newJobStatus,
+    }).eq('id', jobId);
+
+    notifyAdmins(
+      'Tech Cancelled — Action Required',
+      `${techName} cancelled Trip ${tripLabel} on job ${job.jobNumber ?? jobId}. Reason: ${reason}`,
+      { jobId }
+    ).catch(() => {});
+
+    logJobEvent(jobId, 'unassigned',
+      `${techName} removed from Trip ${tripLabel} — Reason: ${reason}`,
+      actorName
+    ).catch(() => {});
+  };
+
+  // Admin assigns a new tech — creates sub-trips (e.g. "2.1") for any unassigned trips
   const reassignTech = async (jobId, newTech, adminName = 'Admin') => {
     const job = jobs.find((j) => j.id === jobId);
     if (!job) return;
 
-    const oldTechId = job.technicianId;
-    const oldTechName = job.technicianName ?? 'previous technician';
+    const oldTechName = job.technicianName ?? 'unassigned';
+    const unassignedTrips = job.trips.filter((t) => t.unassignedReason);
 
-    // Reset active (non-completed/non-for_return) trips back to scheduled, preserve history
-    const updatedTrips = job.trips.map((t) => {
-      const isActive = t.status !== 'completed' && t.status !== 'for_return';
-      if (!isActive) return { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt, checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null, checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null };
+    // Build sub-trips for each unassigned trip
+    const subTrips = unassignedTrips.map((t, i) => {
+      const parentLabel = t.tripLabel ?? String(t.tripNumber ?? (job.trips.indexOf(t) + 1));
       return {
-        ...t,
+        id: `trip_${Date.now()}_${i}`,
+        tripNumber: job.trips.length + i + 1,
+        tripLabel: `${parentLabel}.1`,
+        technicianId: newTech.id ?? null,
+        technicianName: newTech.full_name ?? null,
         status: 'scheduled',
-        scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt,
-        checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
-        checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+        scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
+        scopeOfWork: t.scopeOfWork ?? '',
       };
     });
+
+    const updatedTrips = [
+      ...job.trips.map(serializeTrip),
+      ...subTrips,
+    ];
     const newJobStatus = rollupJobStatus(updatedTrips);
 
-    const payload = {
+    setJobs((prev) => prev.map((j) =>
+      j.id !== jobId ? j : {
+        ...j,
+        technicianId: newTech.id ?? null,
+        technicianName: newTech.full_name ?? null,
+        status: newJobStatus,
+        trips: updatedTrips.map(deserializeTrip),
+      }
+    ));
+
+    await supabase.from('jobs').update({
       technician_id: newTech.id ?? null,
       metadata: { ...(job.metadata ?? {}), technicianName: newTech.full_name ?? null },
       trips: updatedTrips,
       status: newJobStatus,
-    };
+    }).eq('id', jobId);
 
-    setJobs((prev) => prev.map((j) =>
-      j.id === jobId
-        ? {
-            ...j,
-            technicianId: newTech.id ?? null,
-            technicianName: newTech.full_name ?? null,
-            status: newJobStatus,
-            trips: updatedTrips.map((t) => ({ ...t, scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null })),
-          }
-        : j
-    ));
-
-    await supabase.from('jobs').update(payload).eq('id', jobId);
-
-    // Notify old tech they've been unassigned
-    if (oldTechId) {
-      notifyUser(
-        oldTechId,
-        'Job Reassigned',
-        `You have been unassigned from job ${job.jobNumber ?? jobId}. Please contact your admin for details.`,
-        { jobId }
-      ).catch(() => {});
-    }
-
-    // Notify new tech they've been assigned
     if (newTech.id) {
-      notifyUser(
-        newTech.id,
+      notifyUser(newTech.id,
         'New Job Assigned',
         `You have been assigned to job ${job.jobNumber ?? jobId} — ${job.client?.name ?? ''}.`,
         { jobId }
       ).catch(() => {});
     }
 
-    logJobEvent(
-      jobId,
-      'reassigned',
-      `Tech reassigned from ${oldTechName} to ${newTech.full_name ?? 'new technician'}`,
+    logJobEvent(jobId, 'reassigned',
+      `Tech assigned: ${newTech.full_name ?? 'new technician'} (replaced ${oldTechName})`,
       adminName
     ).catch(() => {});
   };
 
-  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, reassignTech, refresh: fetchJobs };
+  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, reassignTech, refresh: fetchJobs };
 }

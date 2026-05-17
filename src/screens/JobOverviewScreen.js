@@ -125,7 +125,7 @@ function MapWithPin({ address }) {
 export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, reassignTech, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, reassignTech, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { technicians } = useProfiles();
   const { events: jobEvents } = useJobEvents(job?.id);
   const { notes, refresh: refreshNotes } = useNotes(jobId);
@@ -148,6 +148,9 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [reassignSearch, setReassignSearch] = useState('');
   const [reassigning, setReassigning] = useState(false);
   const [showEventHistory, setShowEventHistory] = useState(false);
+  const [cancelTripId, setCancelTripId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
   const [newTripScope, setNewTripScope] = useState('');
@@ -644,6 +647,16 @@ export default function JobOverviewScreen({ route, navigation }) {
             </TouchableOpacity>
           )}
 
+          {/* Cancel this trip — tech only, when trip is not yet submitted/completed */}
+          {!isAdmin && activeTrip.status !== 'completed' && activeTrip.status !== 'pending_approval' && activeTrip.status !== 'for_return' && (
+            <TouchableOpacity
+              style={[styles.linkBtn, { marginTop: 4 }]}
+              onPress={() => { setCancelTripId(activeTrip.id); setCancelReason(''); }}
+            >
+              <Text style={[styles.linkBtnText, { color: '#ef4444' }]}>⚠ Cancel this trip</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Undo last status — tech only, when a previous status exists */}
           {!isAdmin && getTripStatus(activeTrip.status).prev && (
             <TouchableOpacity
@@ -992,7 +1005,19 @@ export default function JobOverviewScreen({ route, navigation }) {
               activeOpacity={0.7}
             >
               <View style={styles.tripLeft}>
-                <Text style={styles.tripLabel}>Trip {trip.tripNumber}</Text>
+                <Text style={styles.tripLabel}>Trip {trip.tripLabel ?? trip.tripNumber}</Text>
+                {/* Tech assigned to this specific trip */}
+                {trip.unassignedReason ? (
+                  <View style={styles.tripUnassignedRow}>
+                    <Ionicons name="person-remove-outline" size={12} color="#ef4444" />
+                    <Text style={styles.tripUnassignedText}>Unassigned — {trip.unassignedReason}</Text>
+                  </View>
+                ) : (trip.technicianName ?? (isAdmin ? job?.technicianName : null)) ? (
+                  <View style={styles.tripTechRow}>
+                    <Ionicons name="person-outline" size={12} color={Colors.textLight} />
+                    <Text style={styles.tripTechText}>{trip.technicianName ?? job?.technicianName}</Text>
+                  </View>
+                ) : null}
                 <Text style={styles.tripDate}>{formatTripDate(trip.scheduledAt)}</Text>
                 {!!trip.scopeOfWork && (
                   <Text style={styles.tripScope} numberOfLines={2}>{trip.scopeOfWork}</Text>
@@ -1142,6 +1167,50 @@ export default function JobOverviewScreen({ route, navigation }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Cancel trip modal — tech enters reason */}
+      <Modal visible={!!cancelTripId} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCancelTripId(null)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cancel This Trip</Text>
+              <TouchableOpacity onPress={() => setCancelTripId(null)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>Please tell us why you're cancelling. This will be logged and your admin will be notified.</Text>
+            <TextInput
+              style={[styles.modalInput, { minHeight: 100, textAlignVertical: 'top', marginHorizontal: 20 }]}
+              value={cancelReason}
+              onChangeText={setCancelReason}
+              placeholder="e.g. Personal emergency, schedule conflict, vehicle issue…"
+              placeholderTextColor={Colors.gray}
+              multiline
+              autoFocus
+            />
+            <TouchableOpacity
+              style={[styles.modalSave, { marginHorizontal: 20, marginTop: 16, backgroundColor: '#ef4444', opacity: cancelReason.trim().length < 5 || cancelling ? 0.5 : 1 }]}
+              disabled={cancelReason.trim().length < 5 || cancelling}
+              onPress={async () => {
+                setCancelling(true);
+                try {
+                  await unassignTechFromTrip(job.id, cancelTripId, cancelReason.trim(), profile?.full_name ?? 'Tech');
+                  setCancelTripId(null);
+                } catch (e) {
+                  Alert.alert('Error', e.message);
+                } finally {
+                  setCancelling(false);
+                }
+              }}
+            >
+              {cancelling
+                ? <ActivityIndicator color={Colors.white} />
+                : <Text style={styles.modalSaveText}>Confirm Cancellation</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1275,6 +1344,10 @@ const styles = StyleSheet.create({
   eventDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent, marginTop: 4 },
   eventDesc: { fontSize: 13, fontWeight: '600', color: Colors.text },
   eventMeta: { fontSize: 11, color: Colors.textLight, marginTop: 2 },
+  tripTechRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+  tripTechText: { fontSize: 11, color: Colors.textLight },
+  tripUnassignedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+  tripUnassignedText: { fontSize: 11, color: '#ef4444', fontWeight: '600', flex: 1 },
   closedBanner: {
     backgroundColor: Colors.completed + '15',
     borderRadius: 10,
