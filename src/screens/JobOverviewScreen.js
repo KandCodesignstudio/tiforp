@@ -405,6 +405,15 @@ export default function JobOverviewScreen({ route, navigation }) {
           <Ionicons name="location-outline" size={18} color={Colors.accent} style={styles.infoIcon} />
           <Text style={[styles.infoText, styles.infoLink]}>{client?.address}</Text>
         </TouchableOpacity>
+        {job.technicianName && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Ionicons name="person-outline" size={18} color={Colors.accent} style={styles.infoIcon} />
+              <Text style={styles.infoText}>{job.technicianName}</Text>
+            </View>
+          </>
+        )}
       </View>
 
       <View style={styles.card}>
