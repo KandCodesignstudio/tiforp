@@ -86,6 +86,11 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.signupBtnText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerCopyright}>© 2026 ITFORP. All rights reserved.</Text>
+          <Text style={styles.footerCredit}>Designed by kandcodesignstudio.com</Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -143,4 +148,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signupBtnText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
+  footer: { marginTop: 40, alignItems: 'center', gap: 4 },
+  footerCopyright: { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
+  footerCredit: { fontSize: 11, color: 'rgba(255,255,255,0.35)' },
 });
