@@ -21,6 +21,8 @@ import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 import { supabase } from '../config/supabase';
 import DateTimePickerField from '../components/DateTimePicker';
 import { submitReview } from '../hooks/useTechReviews';
+import { useJobEvents } from '../hooks/useJobEvents';
+import { useProfiles } from '../hooks/useProfiles';
 
 function formatDuration(fromDate, toDate) {
   if (!fromDate || !toDate) return null;
@@ -123,7 +125,9 @@ function MapWithPin({ address }) {
 export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, reassignTech, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { technicians } = useProfiles();
+  const { events: jobEvents } = useJobEvents(job?.id);
   const { notes, refresh: refreshNotes } = useNotes(jobId);
   const [jobReview, setJobReview] = useState(null);
   const [focusTick, setFocusTick] = useState(0);
@@ -140,6 +144,10 @@ export default function JobOverviewScreen({ route, navigation }) {
     supabase.from('tech_reviews').select('*').eq('job_id', jobId).maybeSingle()
       .then(({ data }) => { if (data) setJobReview(data); });
   }, [jobId]);
+  const [showReassign, setShowReassign] = useState(false);
+  const [reassignSearch, setReassignSearch] = useState('');
+  const [reassigning, setReassigning] = useState(false);
+  const [showEventHistory, setShowEventHistory] = useState(false);
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
   const [newTripScope, setNewTripScope] = useState('');
@@ -779,6 +787,110 @@ export default function JobOverviewScreen({ route, navigation }) {
         </View>
       )}
 
+      {/* Reassign Technician — admin only */}
+      {isAdmin && status !== 'closed' && (
+        <TouchableOpacity
+          style={styles.reassignBtn}
+          onPress={() => { setReassignSearch(''); setShowReassign(true); }}
+        >
+          <Ionicons name="person-outline" size={18} color={Colors.primary} />
+          <Text style={styles.reassignBtnText}>Reassign Technician</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Event History — admin only */}
+      {isAdmin && jobEvents.length > 0 && (
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+            onPress={() => setShowEventHistory((v) => !v)}
+          >
+            <Text style={styles.sectionLabel}>Event History ({jobEvents.length})</Text>
+            <Ionicons name={showEventHistory ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.textLight} />
+          </TouchableOpacity>
+          {showEventHistory && jobEvents.map((ev) => (
+            <View key={ev.id} style={styles.eventRow}>
+              <View style={styles.eventDot} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.eventDesc}>{ev.description}</Text>
+                <Text style={styles.eventMeta}>
+                  {ev.actor_name ? `${ev.actor_name}  ·  ` : ''}
+                  {ev.created_at ? new Date(ev.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Reassign modal */}
+      <Modal visible={showReassign} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowReassign(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Reassign Technician</Text>
+            <TouchableOpacity onPress={() => setShowReassign(false)}>
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.modalSub}>Currently assigned: <Text style={{ fontWeight: '700' }}>{job?.technicianName ?? 'None'}</Text></Text>
+          <View style={styles.searchRow2}>
+            <Ionicons name="search" size={16} color={Colors.gray} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput2}
+              value={reassignSearch}
+              onChangeText={setReassignSearch}
+              placeholder="Search technicians…"
+              placeholderTextColor={Colors.gray}
+              autoCorrect={false}
+              autoFocus
+            />
+          </View>
+          <ScrollView>
+            {(reassignSearch.trim()
+              ? technicians.filter((t) => (t.full_name ?? '').toLowerCase().includes(reassignSearch.trim().toLowerCase()))
+              : technicians
+            ).map((tech) => (
+              <TouchableOpacity
+                key={tech.id ?? tech.full_name}
+                style={styles.techPickRow}
+                disabled={reassigning}
+                onPress={() => {
+                  Alert.alert(
+                    'Reassign Technician',
+                    `Replace ${job?.technicianName ?? 'current tech'} with ${tech.full_name}? The active trip will be reset to Scheduled.`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Reassign',
+                        style: 'destructive',
+                        onPress: async () => {
+                          setReassigning(true);
+                          try {
+                            await reassignTech(job.id, tech, profile?.full_name ?? 'Admin');
+                            setShowReassign(false);
+                          } catch (e) {
+                            Alert.alert('Error', e.message);
+                          } finally {
+                            setReassigning(false);
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <View style={styles.techPickAvatar}>
+                  <Text style={styles.techPickAvatarText}>{(tech.full_name || '?')[0].toUpperCase()}</Text>
+                </View>
+                <Text style={styles.techPickName}>{tech.full_name}</Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.gray} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          {reassigning && <ActivityIndicator color={Colors.accent} style={{ margin: 16 }} />}
+        </View>
+      </Modal>
+
       {isAdmin && (
         <TouchableOpacity
           style={styles.exportBtn}
@@ -1136,6 +1248,33 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   closeJobBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+  reassignBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: Colors.white, borderRadius: 10, paddingVertical: 13, marginBottom: 12,
+    borderWidth: 1.5, borderColor: Colors.primary,
+  },
+  reassignBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  modalSub: { fontSize: 13, color: Colors.textLight, marginHorizontal: 20, marginBottom: 12 },
+  searchRow2: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.screenBg,
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginHorizontal: 20, marginBottom: 8,
+    borderWidth: 1, borderColor: Colors.lightGray,
+  },
+  searchInput2: { flex: 1, fontSize: 14, color: Colors.text, padding: 0 },
+  techPickRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14,
+    paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: Colors.lightGray,
+  },
+  techPickAvatar: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  techPickAvatarText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
+  techPickName: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
+  eventRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 8, borderTopWidth: 1, borderTopColor: Colors.lightGray },
+  eventDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent, marginTop: 4 },
+  eventDesc: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  eventMeta: { fontSize: 11, color: Colors.textLight, marginTop: 2 },
   closedBanner: {
     backgroundColor: Colors.completed + '15',
     borderRadius: 10,

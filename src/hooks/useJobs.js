@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
 import { rollupJobStatus, getTripStatus } from '../utils/status';
 import { notifyAdmins, notifyUser } from '../utils/notifications';
+import { logJobEvent } from './useJobEvents';
 
 function transformJob(row) {
   return {
@@ -81,6 +82,10 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
 
     await supabase.from('jobs').update({ trips: updatedTrips, status: newJobStatus }).eq('id', jobId);
 
+    const actorName = userProfile?.full_name ?? (isAdmin ? 'Admin' : 'Technician');
+    const tripNum = job.trips.find((t) => t.id === tripId)?.tripNumber ?? '?';
+    const jobNum = job.jobNumber ?? jobId;
+
     if (!isAdmin) {
       const statusLabel = getTripStatus(newStatus).label;
       const techName = userProfile?.full_name ?? 'Technician';
@@ -88,8 +93,8 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
         ? 'Completion Approval Needed'
         : 'Trip Status Update';
       const body = newStatus === 'pending_approval'
-        ? `${techName} submitted Trip for approval on job ${job.jobNumber ?? jobId}. Please review notes and photos.`
-        : `${techName} marked Trip as "${statusLabel}" on job ${job.jobNumber ?? jobId}`;
+        ? `${techName} submitted Trip for approval on job ${jobNum}. Please review notes and photos.`
+        : `${techName} marked Trip as "${statusLabel}" on job ${jobNum}`;
       notifyAdmins(title, body, { jobId }).catch(() => {});
     }
 
@@ -97,7 +102,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       notifyUser(
         job.technicianId,
         'Trip Approved!',
-        `Admin approved completion of Trip on job ${job.jobNumber ?? jobId}.`,
+        `Admin approved completion of Trip on job ${jobNum}.`,
         { jobId }
       ).catch(() => {});
     }
@@ -106,10 +111,22 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       notifyUser(
         job.technicianId,
         'Trip Sent Back for Corrections',
-        `Admin returned Trip on job ${job.jobNumber ?? jobId} for corrections. Please review and resubmit.`,
+        `Admin returned Trip on job ${jobNum} for corrections. Please review and resubmit.`,
         { jobId }
       ).catch(() => {});
     }
+
+    // Log event for audit trail
+    const eventDesc = {
+      checked_in: `Trip ${tripNum} — Tech checked in`,
+      checked_out: isAdmin
+        ? `Trip ${tripNum} — Admin sent back for corrections`
+        : `Trip ${tripNum} — Tech checked out`,
+      pending_approval: `Trip ${tripNum} — Submitted for approval`,
+      completed: `Trip ${tripNum} — Approved and marked complete`,
+      for_return: `Trip ${tripNum} — Marked for return`,
+    }[newStatus] ?? `Trip ${tripNum} — Status changed to ${newStatus}`;
+    logJobEvent(jobId, newStatus, eventDesc, actorName).catch(() => {});
   };
 
   const updatePayments = async (jobId, { clientPaid, techPaid }) => {
@@ -220,10 +237,81 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, attachments } : j));
   };
 
-  const closeJob = async (jobId) => {
+  const closeJob = async (jobId, actorName = 'Admin') => {
     setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, status: 'closed' } : j));
     await supabase.from('jobs').update({ status: 'closed' }).eq('id', jobId);
+    logJobEvent(jobId, 'closed', 'Job closed', actorName).catch(() => {});
   };
 
-  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, refresh: fetchJobs };
+  const reassignTech = async (jobId, newTech, adminName = 'Admin') => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+
+    const oldTechId = job.technicianId;
+    const oldTechName = job.technicianName ?? 'previous technician';
+
+    // Reset active (non-completed/non-for_return) trips back to scheduled, preserve history
+    const updatedTrips = job.trips.map((t) => {
+      const isActive = t.status !== 'completed' && t.status !== 'for_return';
+      if (!isActive) return { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt, checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null, checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null };
+      return {
+        ...t,
+        status: 'scheduled',
+        scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt,
+        checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
+        checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+      };
+    });
+    const newJobStatus = rollupJobStatus(updatedTrips);
+
+    const payload = {
+      technician_id: newTech.id ?? null,
+      metadata: { ...(job.metadata ?? {}), technicianName: newTech.full_name ?? null },
+      trips: updatedTrips,
+      status: newJobStatus,
+    };
+
+    setJobs((prev) => prev.map((j) =>
+      j.id === jobId
+        ? {
+            ...j,
+            technicianId: newTech.id ?? null,
+            technicianName: newTech.full_name ?? null,
+            status: newJobStatus,
+            trips: updatedTrips.map((t) => ({ ...t, scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null })),
+          }
+        : j
+    ));
+
+    await supabase.from('jobs').update(payload).eq('id', jobId);
+
+    // Notify old tech they've been unassigned
+    if (oldTechId) {
+      notifyUser(
+        oldTechId,
+        'Job Reassigned',
+        `You have been unassigned from job ${job.jobNumber ?? jobId}. Please contact your admin for details.`,
+        { jobId }
+      ).catch(() => {});
+    }
+
+    // Notify new tech they've been assigned
+    if (newTech.id) {
+      notifyUser(
+        newTech.id,
+        'New Job Assigned',
+        `You have been assigned to job ${job.jobNumber ?? jobId} — ${job.client?.name ?? ''}.`,
+        { jobId }
+      ).catch(() => {});
+    }
+
+    logJobEvent(
+      jobId,
+      'reassigned',
+      `Tech reassigned from ${oldTechName} to ${newTech.full_name ?? 'new technician'}`,
+      adminName
+    ).catch(() => {});
+  };
+
+  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, reassignTech, refresh: fetchJobs };
 }
