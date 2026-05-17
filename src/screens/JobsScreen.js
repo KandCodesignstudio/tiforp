@@ -193,8 +193,10 @@ export default function JobsScreen({ navigation }) {
               <TouchableOpacity
                 onPress={() => Alert.alert('Admin', null, [
                   { text: 'Dashboard', onPress: () => navigation.navigate('Dashboard') },
+                  { text: 'Bug Reports', onPress: () => navigation.navigate('BugReports') },
                   { text: 'Add Technician', onPress: () => navigation.navigate('AddTechnician') },
                   { text: 'Import Jobs (CSV)', onPress: () => navigation.navigate('ImportJobs') },
+                  { text: 'Report a Bug', onPress: () => navigation.navigate('ReportBug') },
                   { text: 'Cancel', style: 'cancel' },
                 ])}
                 style={styles.logoutBtn}
@@ -237,8 +239,17 @@ export default function JobsScreen({ navigation }) {
 
       {!isAdmin && (
         <View style={styles.greetingCard}>
-          <Text style={styles.greetingHi}>Hi, {firstName}!</Text>
-          <Text style={styles.greetingMsg}>{motivationalMessage}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greetingHi}>Hi, {firstName}!</Text>
+            <Text style={styles.greetingMsg}>{motivationalMessage}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ReportBug')}
+            style={styles.bugBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="bug-outline" size={18} color={Colors.danger} />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -470,9 +481,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   greetingHi: { fontSize: 17, fontWeight: '800', color: Colors.primary, marginBottom: 2 },
   greetingMsg: { fontSize: 14, color: Colors.text, fontStyle: 'italic' },
+  bugBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.danger + '12',
+    alignItems: 'center', justifyContent: 'center',
+    marginLeft: 8,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

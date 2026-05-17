@@ -19,6 +19,8 @@ import DashboardScreen from '../screens/DashboardScreen';
 import EditJobScreen from '../screens/EditJobScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import TechProfileScreen from '../screens/TechProfileScreen';
+import ReportBugScreen from '../screens/ReportBugScreen';
+import BugReportsScreen from '../screens/BugReportsScreen';
 import { Colors } from '../utils/colors';
 
 const Stack = createNativeStackNavigator();
@@ -97,6 +99,16 @@ function MainStack() {
       <Stack.Screen
         name="TechProfile"
         component={TechProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ReportBug"
+        component={ReportBugScreen}
+        options={{ title: 'Report a Bug' }}
+      />
+      <Stack.Screen
+        name="BugReports"
+        component={BugReportsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
