@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator, RefreshControl, StatusBar, ScrollView, TextInput,
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotificationInbox } from '../hooks/useNotificationInbox';
+import { supabase } from '../config/supabase';
 import { Colors } from '../utils/colors';
 import { getJobStatus } from '../utils/status';
 import { getRandomMessage } from '../utils/motivationalMessages';
@@ -26,7 +27,18 @@ function formatDateTime(date) {
   });
 }
 
-function JobCard({ job, onPress, showPayment }) {
+function StarRow({ rating }) {
+  return (
+    <View style={styles.starRow}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Ionicons key={i} name={i <= Math.round(rating) ? 'star' : 'star-outline'} size={13} color={i <= Math.round(rating) ? '#F59E0B' : '#D1D5DB'} />
+      ))}
+      <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+    </View>
+  );
+}
+
+function JobCard({ job, onPress, showPayment, rating }) {
   const statusInfo = getJobStatus(job.status);
   const tripCount = job.trips?.length ?? 0;
 
@@ -37,6 +49,17 @@ function JobCard({ job, onPress, showPayment }) {
         <Text style={styles.jobNumber}>{job.jobNumber}</Text>
       </View>
       <Text style={styles.address}>{job.client?.address}</Text>
+      {job.technicianName ? (
+        <View style={styles.techNameRow}>
+          <Ionicons name="person-outline" size={12} color={Colors.textLight} />
+          <Text style={styles.techNameText}>{job.technicianName}</Text>
+          {rating != null && <StarRow rating={rating} />}
+        </View>
+      ) : rating != null ? (
+        <View style={styles.techNameRow}>
+          <StarRow rating={rating} />
+        </View>
+      ) : null}
       <View style={styles.cardFooter}>
         <View style={styles.tripInfo}>
           <Text style={styles.tripCount}>
@@ -94,6 +117,16 @@ export default function JobsScreen({ navigation }) {
 
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || (user?.email?.split('@')[0]) || 'there';
   const [motivationalMessage, setMotivationalMessage] = useState(() => getRandomMessage());
+  const [reviewMap, setReviewMap] = useState({});
+
+  useEffect(() => {
+    supabase.from('tech_reviews').select('job_id, rating').then(({ data }) => {
+      if (!data) return;
+      const map = {};
+      for (const r of data) map[r.job_id] = r.rating;
+      setReviewMap(map);
+    });
+  }, []);
 
   const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
 
@@ -122,7 +155,8 @@ export default function JobsScreen({ navigation }) {
       return (
         (j.jobNumber ?? '').toLowerCase().includes(q) ||
         (j.client?.name ?? '').toLowerCase().includes(q) ||
-        (j.client?.address ?? '').toLowerCase().includes(q)
+        (j.client?.address ?? '').toLowerCase().includes(q) ||
+        (j.technicianName ?? '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -166,6 +200,7 @@ export default function JobsScreen({ navigation }) {
       <JobCard
         job={item}
         showPayment={isAdmin}
+        rating={reviewMap[item.id] ?? null}
         onPress={() => navigation.navigate('JobDetail', {
           jobId: item.id,
           job: {
@@ -402,7 +437,11 @@ const styles = StyleSheet.create({
   },
   clientName: { fontSize: 15, fontWeight: '700', color: Colors.text, flex: 1 },
   jobNumber: { fontSize: 13, fontWeight: '600', color: Colors.darkGray, marginLeft: 8 },
-  address: { fontSize: 13, color: Colors.textLight, marginBottom: 12 },
+  address: { fontSize: 13, color: Colors.textLight, marginBottom: 6 },
+  techNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 },
+  techNameText: { fontSize: 12, color: Colors.textLight, flex: 1 },
+  starRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  ratingText: { fontSize: 11, fontWeight: '700', color: '#F59E0B', marginLeft: 3 },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
