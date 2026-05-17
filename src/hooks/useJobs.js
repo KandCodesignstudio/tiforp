@@ -385,5 +385,60 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     ).catch(() => {});
   };
 
-  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, reassignTech, refresh: fetchJobs };
+  // Admin removes a tech: deletes the trip and creates a fresh scheduled replacement
+  const adminRemoveTechFromTrip = async (jobId, tripId, reason, adminName = 'Admin') => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+
+    const trip = job.trips.find((t) => t.id === tripId);
+    const techName = trip?.technicianName ?? job.technicianName ?? 'Technician';
+    const oldTechId = trip?.technicianId ?? job.technicianId;
+    const tripLabel = trip?.tripLabel ?? String(trip?.tripNumber ?? '?');
+
+    const freshTrip = {
+      id: `trip_${Date.now()}`,
+      tripNumber: trip?.tripNumber ?? job.trips.length,
+      tripLabel: tripLabel,
+      technicianId: null,
+      technicianName: null,
+      status: 'scheduled',
+      scheduledAt: trip?.scheduledAt?.toISOString?.() ?? trip?.scheduledAt ?? null,
+      scopeOfWork: trip?.scopeOfWork ?? '',
+    };
+
+    const updatedTrips = job.trips.map((t) => t.id !== tripId ? serializeTrip(t) : freshTrip);
+    const newJobStatus = rollupJobStatus(updatedTrips);
+
+    setJobs((prev) => prev.map((j) =>
+      j.id !== jobId ? j : {
+        ...j,
+        technicianId: null,
+        technicianName: null,
+        status: newJobStatus,
+        trips: updatedTrips.map(deserializeTrip),
+      }
+    ));
+
+    await supabase.from('jobs').update({
+      technician_id: null,
+      metadata: { ...(job.metadata ?? {}), technicianName: null },
+      trips: updatedTrips,
+      status: newJobStatus,
+    }).eq('id', jobId);
+
+    if (oldTechId) {
+      notifyUser(oldTechId,
+        'Removed from Trip',
+        `You have been removed from Trip ${tripLabel} on job ${job.jobNumber ?? jobId} by admin. Reason: ${reason}`,
+        { jobId }
+      ).catch(() => {});
+    }
+
+    logJobEvent(jobId, 'admin_removed',
+      `Admin removed ${techName} from Trip ${tripLabel} — Reason: ${reason}. Trip reset for reassignment.`,
+      adminName
+    ).catch(() => {});
+  };
+
+  return { jobs, loading, updateJobStatus, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, adminRemoveTechFromTrip, reassignTech, refresh: fetchJobs };
 }

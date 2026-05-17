@@ -125,7 +125,7 @@ function MapWithPin({ address }) {
 export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, reassignTech, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, adminRemoveTechFromTrip, reassignTech, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { technicians } = useProfiles();
   const { events: jobEvents } = useJobEvents(job?.id);
   const { notes, refresh: refreshNotes } = useNotes(jobId);
@@ -1178,17 +1178,23 @@ export default function JobOverviewScreen({ route, navigation }) {
 
       {/* Cancel trip modal — tech enters reason */}
       <Modal visible={!!cancelTripId} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setCancelTripId(null)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalContainer}>
+        <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Colors.screenBg }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.cancelModalWrap}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{isAdmin ? 'Remove Technician' : 'Cancel This Trip'}</Text>
               <TouchableOpacity onPress={() => setCancelTripId(null)}>
                 <Ionicons name="close" size={24} color={Colors.text} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSub}>{isAdmin ? 'Provide a reason for removing this technician. This will be logged and the tech will be notified.' : 'Please tell us why you\'re cancelling. This will be logged and your admin will be notified.'}</Text>
+
+            <Text style={styles.cancelModalSub}>
+              {isAdmin
+                ? 'Provide a reason for removing this technician. This will be logged and the tech will be notified.'
+                : "Please tell us why you're cancelling. This will be logged and your admin will be notified."}
+            </Text>
+
             <TextInput
-              style={[styles.modalInput, { minHeight: 100, textAlignVertical: 'top', marginHorizontal: 20 }]}
+              style={styles.cancelModalInput}
               value={cancelReason}
               onChangeText={setCancelReason}
               placeholder="e.g. Personal emergency, schedule conflict, vehicle issue…"
@@ -1196,13 +1202,18 @@ export default function JobOverviewScreen({ route, navigation }) {
               multiline
               autoFocus
             />
+
             <TouchableOpacity
-              style={[styles.modalSave, { marginHorizontal: 20, marginTop: 16, backgroundColor: '#ef4444', opacity: cancelReason.trim().length < 5 || cancelling ? 0.5 : 1 }]}
+              style={[styles.cancelModalBtn, (cancelReason.trim().length < 5 || cancelling) && { opacity: 0.45 }]}
               disabled={cancelReason.trim().length < 5 || cancelling}
               onPress={async () => {
                 setCancelling(true);
                 try {
-                  await unassignTechFromTrip(job.id, cancelTripId, cancelReason.trim(), profile?.full_name ?? 'Tech');
+                  if (isAdmin) {
+                    await adminRemoveTechFromTrip(job.id, cancelTripId, cancelReason.trim(), profile?.full_name ?? 'Admin');
+                  } else {
+                    await unassignTechFromTrip(job.id, cancelTripId, cancelReason.trim(), profile?.full_name ?? 'Tech');
+                  }
                   setCancelTripId(null);
                 } catch (e) {
                   Alert.alert('Error', e.message);
@@ -1213,7 +1224,7 @@ export default function JobOverviewScreen({ route, navigation }) {
             >
               {cancelling
                 ? <ActivityIndicator color={Colors.white} />
-                : <Text style={styles.modalSaveText}>Confirm Cancellation</Text>
+                : <Text style={styles.cancelModalBtnText}>{isAdmin ? 'Remove Technician' : 'Confirm Cancellation'}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -1493,4 +1504,20 @@ const styles = StyleSheet.create({
     minHeight: 80, textAlignVertical: 'top', borderWidth: 1, borderColor: Colors.lightGray,
     marginBottom: 20,
   },
+  cancelModalWrap: {
+    flex: 1, backgroundColor: Colors.screenBg, padding: 20,
+  },
+  cancelModalSub: {
+    fontSize: 14, color: Colors.textLight, marginBottom: 16, lineHeight: 20,
+  },
+  cancelModalInput: {
+    backgroundColor: Colors.white, borderRadius: 10, borderWidth: 1,
+    borderColor: Colors.lightGray, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, color: Colors.text, minHeight: 120, textAlignVertical: 'top', marginBottom: 20,
+  },
+  cancelModalBtn: {
+    backgroundColor: Colors.danger, borderRadius: 10, paddingVertical: 15,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cancelModalBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
 });
