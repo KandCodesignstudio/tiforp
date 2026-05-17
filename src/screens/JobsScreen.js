@@ -112,8 +112,6 @@ export default function JobsScreen({ navigation }) {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [techFilter, setTechFilter] = useState('all');
-
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || (user?.email?.split('@')[0]) || 'there';
   const [motivationalMessage, setMotivationalMessage] = useState(() => getRandomMessage());
   const [reviewMap, setReviewMap] = useState({});
@@ -129,15 +127,6 @@ export default function JobsScreen({ navigation }) {
 
   const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
 
-  const techNames = useMemo(() => {
-    const names = new Set();
-    for (const j of jobs) {
-      const n = j.technicianName?.trim() || j.client?.technicianName?.trim();
-      if (n) names.add(n);
-    }
-    return ['all', ...Array.from(names).sort()];
-  }, [jobs]);
-
   const filteredJobs = jobs.filter((j) => {
     const matchesFilter = (() => {
       if (filter === 'all') return true;
@@ -145,10 +134,6 @@ export default function JobsScreen({ navigation }) {
       return j.status === filter;
     })();
     if (!matchesFilter) return false;
-    if (techFilter !== 'all') {
-      const name = j.technicianName?.trim() ?? '';
-      if (name !== techFilter) return false;
-    }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       return (
@@ -327,32 +312,6 @@ export default function JobsScreen({ navigation }) {
         })}
       </ScrollView>
 
-      {isAdmin && techNames.length > 2 && (
-        <View style={styles.techFilterWrap}>
-          <Text style={styles.techFilterLabel}>Tech:</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-            style={{ flex: 1 }}
-          >
-            {techNames.map((name) => {
-              const active = techFilter === name;
-              return (
-                <TouchableOpacity
-                  key={name}
-                  style={[styles.filterChip, active && styles.filterChipActive]}
-                  onPress={() => setTechFilter(name)}
-                >
-                  <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                    {name === 'all' ? 'All' : name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
 
       {loading ? (
         <ActivityIndicator style={styles.loader} size="large" color={Colors.accent} />
@@ -462,22 +421,6 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   emptyText: { textAlign: 'center', color: Colors.gray, marginTop: 40, fontSize: 15 },
-  techFilterWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.screenBg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.lightGray,
-    paddingLeft: 12,
-    maxHeight: 44,
-  },
-  techFilterLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textLight,
-    marginRight: 4,
-    letterSpacing: 0.5,
-  },
   filterScroll: {
     flexGrow: 0,
     flexShrink: 0,
