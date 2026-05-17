@@ -18,6 +18,8 @@ function transformJob(row) {
       ...t,
       id: t.id ?? `trip_${row.id}_${idx}`,
       scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null,
+      checkedInAt: t.checkedInAt ? new Date(t.checkedInAt) : null,
+      checkedOutAt: t.checkedOutAt ? new Date(t.checkedOutAt) : null,
     })),
     attachments: row.attachments ?? [],
     nextTrip: row.next_trip ? new Date(row.next_trip) : null,
@@ -57,9 +59,17 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
   const updateTripStatus = async (jobId, tripId, newStatus) => {
     const job = jobs.find((j) => j.id === jobId);
     if (!job) return;
-    const updatedTrips = job.trips.map((t) =>
-      t.id === tripId ? { ...t, status: newStatus, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt } : { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt }
-    );
+    const nowIso = new Date().toISOString();
+    const updatedTrips = job.trips.map((t) => {
+      if (t.id !== tripId) return { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt, checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null, checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null };
+      return {
+        ...t,
+        status: newStatus,
+        scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt,
+        checkedInAt: newStatus === 'checked_in' ? nowIso : (t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null),
+        checkedOutAt: newStatus === 'checked_out' ? nowIso : (t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null),
+      };
+    });
     const newJobStatus = rollupJobStatus(updatedTrips);
 
     // Optimistic update

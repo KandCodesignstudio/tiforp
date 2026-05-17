@@ -22,6 +22,21 @@ import { supabase } from '../config/supabase';
 import DateTimePickerField from '../components/DateTimePicker';
 import { submitReview } from '../hooks/useTechReviews';
 
+function formatDuration(fromDate, toDate) {
+  if (!fromDate || !toDate) return null;
+  const mins = Math.round((toDate - fromDate) / 60000);
+  if (mins < 1) return '< 1 min';
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+function formatTime(date) {
+  if (!date) return null;
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 function StarDisplay({ rating, size = 16 }) {
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
@@ -277,12 +292,30 @@ export default function JobOverviewScreen({ route, navigation }) {
       const address = job.client?.address;
       if (!address) { doCheckIn(trip); return; }
 
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
-        { headers: { 'Accept-Language': 'en' } }
-      );
-      const results = await res.json();
-      if (!results.length) { doCheckIn(trip); return; }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      let results;
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+          { headers: { 'Accept-Language': 'en' }, signal: controller.signal }
+        );
+        results = await res.json();
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (!results || !results.length) {
+        Alert.alert(
+          'Location Verification Unavailable',
+          'Could not verify your distance from the job site. Check in anyway?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Check In Anyway', onPress: () => doCheckIn(trip) },
+          ]
+        );
+        return;
+      }
 
       const dist = Math.round(
         haversineMeters(pos.coords.latitude, pos.coords.longitude,
@@ -301,8 +334,16 @@ export default function JobOverviewScreen({ route, navigation }) {
       } else {
         doCheckIn(trip);
       }
-    } catch (_) {
-      doCheckIn(trip);
+    } catch (err) {
+      const isAbort = err?.name === 'AbortError';
+      Alert.alert(
+        isAbort ? 'Location Verification Timed Out' : 'Location Error',
+        'Could not verify your distance from the job site. Check in anyway?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Check In Anyway', onPress: () => doCheckIn(trip) },
+        ]
+      );
     }
   };
 
@@ -496,6 +537,16 @@ export default function JobOverviewScreen({ route, navigation }) {
               </Text>
             </View>
           </View>
+          {!!activeTrip.checkedInAt && (
+            <View style={styles.tripTimeBanner}>
+              <Ionicons name="time-outline" size={14} color={Colors.textLight} />
+              <Text style={styles.tripTimeBannerText}>
+                Checked in: {formatTime(activeTrip.checkedInAt)}
+                {activeTrip.checkedOutAt ? `  ·  Out: ${formatTime(activeTrip.checkedOutAt)}` : ''}
+                {activeTrip.checkedInAt && activeTrip.checkedOutAt ? `  ·  ${formatDuration(activeTrip.checkedInAt, activeTrip.checkedOutAt)} onsite` : ''}
+              </Text>
+            </View>
+          )}
 
           {/* Client signature button — shown at checked_out */}
           {!isAdmin && activeTrip.status === 'checked_out' && (
@@ -812,6 +863,12 @@ export default function JobOverviewScreen({ route, navigation }) {
                 {!!trip.scopeOfWork && (
                   <Text style={styles.tripScope} numberOfLines={2}>{trip.scopeOfWork}</Text>
                 )}
+                {!!trip.checkedInAt && (
+                  <Text style={styles.tripTimeText}>In: {formatTime(trip.checkedInAt)}{trip.checkedOutAt ? `  Out: ${formatTime(trip.checkedOutAt)}` : ''}</Text>
+                )}
+                {!!(trip.checkedInAt && trip.checkedOutAt) && (
+                  <Text style={styles.tripDurationText}>⏱ {formatDuration(trip.checkedInAt, trip.checkedOutAt)} onsite</Text>
+                )}
               </View>
               <View style={styles.tripRight}>
                 <View style={[styles.tripStatus, { backgroundColor: tInfo.color + '20' }]}>
@@ -1101,6 +1158,10 @@ const styles = StyleSheet.create({
   tripLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
   tripDate: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
   tripScope: { fontSize: 12, color: Colors.darkGray, marginTop: 4, lineHeight: 16 },
+  tripTimeText: { fontSize: 11, color: Colors.textLight, marginTop: 4 },
+  tripDurationText: { fontSize: 11, color: Colors.accent, fontWeight: '600', marginTop: 2 },
+  tripTimeBanner: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, padding: 8, backgroundColor: Colors.screenBg, borderRadius: 8 },
+  tripTimeBannerText: { fontSize: 12, color: Colors.textLight, flexShrink: 1 },
   tripRight: { alignItems: 'flex-end', gap: 8 },
   tripStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   tripStatusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
