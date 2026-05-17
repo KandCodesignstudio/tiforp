@@ -194,6 +194,10 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       .from('jobs')
       .update({ trips: updatedTrips, status: newJobStatus, next_trip: nextTripIso, technician_id: derived.id, metadata: { ...(job.metadata ?? {}), technicianName: derived.name } })
       .eq('id', jobId);
+
+    const actor = userProfile?.full_name ?? 'Admin';
+    const techPart = technicianName ? ` — assigned to ${technicianName}` : '';
+    logJobEvent(jobId, 'trip_added', `Trip ${newTrip.tripLabel} added${techPart}`, actor).catch(() => {});
   };
 
   const updateTrip = async (jobId, tripId, { scheduledAt, scopeOfWork, technicianId, technicianName }) => {
@@ -227,11 +231,22 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     ));
 
     await supabase.from('jobs').update({ trips: updatedTrips, next_trip: nextTripIso, technician_id: derivedTechId }).eq('id', jobId);
+
+    const actor = userProfile?.full_name ?? 'Admin';
+    const tripObj = job.trips.find((t) => t.id === tripId);
+    const tripNum = tripObj?.tripLabel ?? tripObj?.tripNumber ?? '?';
+    if (technicianName !== undefined) {
+      logJobEvent(jobId, 'tech_assigned', `Trip ${tripNum} — technician assigned to ${technicianName}`, actor).catch(() => {});
+    } else {
+      logJobEvent(jobId, 'trip_updated', `Trip ${tripNum} updated`, actor).catch(() => {});
+    }
   };
 
-  const deleteTrip = async (jobId, tripId) => {
+  const deleteTrip = async (jobId, tripId, actorName) => {
     const job = jobs.find((j) => j.id === jobId);
     if (!job) return;
+    const deletedTrip = job.trips.find((t) => t.id === tripId);
+    const tripNum = deletedTrip?.tripLabel ?? deletedTrip?.tripNumber ?? '?';
     const remaining = job.trips
       .filter((t) => t.id !== tripId)
       .map((t, idx) => ({ ...t, tripNumber: idx + 1, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt }));
@@ -253,6 +268,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     ));
 
     await supabase.from('jobs').update({ trips: remaining, status: newJobStatus, next_trip: nextTripIso }).eq('id', jobId);
+    logJobEvent(jobId, 'deleted', `Trip ${tripNum} deleted`, actorName ?? (userProfile?.full_name ?? 'Admin')).catch(() => {});
   };
 
   const updateAttachments = (jobId, attachments) => {
