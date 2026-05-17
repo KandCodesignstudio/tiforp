@@ -305,10 +305,8 @@ export default function JobOverviewScreen({ route, navigation }) {
       createdAt: new Date().toISOString(),
     };
     const updatedAttachments = [...(job.attachments ?? []), sigAttachment];
-    // Optimistic local update so PDF export sees the signature immediately
     updateAttachments(job.id, updatedAttachments);
     await supabase.from('jobs').update({ attachments: updatedAttachments }).eq('id', job.id);
-    updateTripStatus(job.id, trip.id, 'pending_approval');
   };
 
   const handleAdvanceStatus = (trip) => {
