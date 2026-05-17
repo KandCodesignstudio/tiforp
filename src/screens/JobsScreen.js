@@ -49,17 +49,14 @@ function JobCard({ job, onPress, showPayment, rating }) {
         <Text style={styles.jobNumber}>{job.jobNumber}</Text>
       </View>
       <Text style={styles.address}>{job.client?.address}</Text>
-      {job.technicianName ? (
+      {/* Admin: show assigned tech name + rating inline */}
+      {showPayment && job.technicianName && (
         <View style={styles.techNameRow}>
           <Ionicons name="person-outline" size={12} color={Colors.textLight} />
           <Text style={styles.techNameText}>{job.technicianName}</Text>
           {rating != null && <StarRow rating={rating} />}
         </View>
-      ) : rating != null ? (
-        <View style={styles.techNameRow}>
-          <StarRow rating={rating} />
-        </View>
-      ) : null}
+      )}
       <View style={styles.cardFooter}>
         <View style={styles.tripInfo}>
           <Text style={styles.tripCount}>
@@ -70,6 +67,8 @@ function JobCard({ job, onPress, showPayment, rating }) {
               NEXT {formatDateTime(job.nextTrip).toUpperCase()}
             </Text>
           )}
+          {/* Tech: show admin rating below trip info for closed jobs */}
+          {!showPayment && rating != null && <StarRow rating={rating} />}
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusInfo.color + '20' }]}>
           <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
