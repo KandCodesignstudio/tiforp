@@ -76,7 +76,9 @@ const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'in_progress', label: 'In Progress' },
   { key: 'needs_followup', label: 'For Return' },
+  { key: 'pending_approval', label: 'Pending' },
   { key: 'completed', label: 'Completed' },
+  { key: 'closed', label: 'Closed', adminOnly: true },
   { key: 'unpaid', label: 'Unpaid', adminOnly: true },
 ];
 
@@ -127,7 +129,12 @@ export default function JobsScreen({ navigation }) {
   });
 
   const inProgress = filteredJobs.filter((j) => j.status === 'in_progress' || j.status === 'needs_followup');
+  const pendingApproval = filteredJobs.filter((j) => j.status === 'pending_approval');
   const completed = filteredJobs.filter((j) => j.status === 'completed');
+  const closed = filteredJobs.filter((j) => j.status === 'closed');
+  const other = filteredJobs.filter((j) =>
+    !['in_progress', 'needs_followup', 'pending_approval', 'completed', 'closed'].includes(j.status)
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -137,8 +144,14 @@ export default function JobsScreen({ navigation }) {
   const sections = [
     ...(inProgress.length > 0 ? [{ type: 'section-header', label: 'Active', key: 'h_inprogress' }] : []),
     ...inProgress.map((j) => ({ type: 'job', ...j, key: j.id })),
+    ...(pendingApproval.length > 0 ? [{ type: 'section-header', label: 'Pending Approval', key: 'h_pending' }] : []),
+    ...pendingApproval.map((j) => ({ type: 'job', ...j, key: j.id })),
+    ...(other.length > 0 ? [{ type: 'section-header', label: 'Scheduled', key: 'h_other' }] : []),
+    ...other.map((j) => ({ type: 'job', ...j, key: j.id })),
     ...(completed.length > 0 ? [{ type: 'section-header', label: 'Completed', key: 'h_completed' }] : []),
     ...completed.map((j) => ({ type: 'job', ...j, key: j.id })),
+    ...(closed.length > 0 ? [{ type: 'section-header', label: 'Closed', key: 'h_closed' }] : []),
+    ...closed.map((j) => ({ type: 'job', ...j, key: j.id })),
   ];
 
   const renderItem = ({ item }) => {
