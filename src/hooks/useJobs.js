@@ -9,7 +9,7 @@ function transformJob(row) {
     jobNumber: row.job_number,
     status: row.status,
     technicianId: row.technician_id,
-    technicianName: row.technician_name ?? null,
+    technicianName: row.metadata?.technicianName ?? null,
     clientPaid: row.client_paid ?? false,
     techPaid: row.tech_paid ?? false,
     client: row.client ?? {},

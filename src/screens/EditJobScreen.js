@@ -54,7 +54,7 @@ export default function EditJobScreen({ route, navigation }) {
         address: address.trim(),
       },
       technician_id: selectedTech.isStatic ? null : selectedTech.id,
-      technician_name: selectedTech.isStatic ? selectedTech.full_name : null,
+      metadata: { ...(job.metadata ?? {}), technicianName: selectedTech.full_name ?? null },
     };
 
     try {

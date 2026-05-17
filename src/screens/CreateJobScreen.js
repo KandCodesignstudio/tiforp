@@ -51,7 +51,7 @@ export default function CreateJobScreen({ navigation }) {
       job_number: jobNumber.trim(),
       status: 'in_progress',
       technician_id: selectedTech.id ?? null,
-      technician_name: selectedTech.isStatic ? selectedTech.full_name : null,
+      metadata: { technicianName: selectedTech.full_name ?? null },
       client: {
         name: clientName.trim().toUpperCase(),
         storeNumber: storeNumber.trim(),
