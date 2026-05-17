@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { Colors } from '../utils/colors';
 
 export default function SplashScreen() {
@@ -25,7 +25,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
-        <Text style={styles.brandSmall}>ITforP</Text>
+        <Image source={require('../../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
         <Text style={styles.brandLarge}>CORE</Text>
         <Text style={styles.tagline}>Centralized Operations & Resource Engine</Text>
       </Animated.View>
@@ -43,19 +43,18 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
   },
-  brandSmall: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.accentLight,
-    letterSpacing: 6,
-    marginBottom: -4,
+  logoImage: {
+    width: 180,
+    height: 60,
+    marginBottom: 4,
   },
   brandLarge: {
     fontSize: 80,
     fontWeight: '900',
     color: Colors.white,
-    letterSpacing: -2,
+    letterSpacing: 28,
     lineHeight: 88,
+    marginLeft: 28,
   },
   tagline: {
     fontSize: 13,
