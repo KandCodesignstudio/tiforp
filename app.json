@@ -15,7 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.itforp.core",
-      "newArchEnabled": false
+      "newArchEnabled": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -35,15 +38,17 @@
           "sounds": []
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "f5b2d7b1-4fe3-4ead-bdfb-09f8333e3ca4"
       }
-    }
+    },
+    "owner": "kandcodesignstudio"
   }
 }
