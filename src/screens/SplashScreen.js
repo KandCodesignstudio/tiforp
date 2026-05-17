@@ -44,17 +44,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    width: 180,
-    height: 60,
-    marginBottom: 4,
+    width: 280,
+    height: 100,
+    marginBottom: 8,
   },
   brandLarge: {
     fontSize: 80,
     fontWeight: '900',
     color: Colors.white,
-    letterSpacing: 28,
+    letterSpacing: 38,
     lineHeight: 88,
-    marginLeft: 28,
+    marginLeft: 38,
   },
   tagline: {
     fontSize: 13,
