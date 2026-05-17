@@ -145,6 +145,10 @@ export default function JobOverviewScreen({ route, navigation }) {
       .then(({ data }) => { if (data) setJobReview(data); });
   }, [jobId]);
   const [showEventHistory, setShowEventHistory] = useState(true);
+  const [assignTechTripId, setAssignTechTripId] = useState(null);
+  const [assignTechSelected, setAssignTechSelected] = useState(null);
+  const [assignTechSearch, setAssignTechSearch] = useState('');
+  const [savingAssign, setSavingAssign] = useState(false);
   const [cancelTripId, setCancelTripId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -990,6 +994,15 @@ export default function JobOverviewScreen({ route, navigation }) {
                     <TouchableOpacity onPress={() => openEditTrip(trip)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
                     </TouchableOpacity>
+                    {/* Assign tech button — shown when trip has no tech and is not completed */}
+                    {!trip.technicianName && !trip.unassignedReason && trip.status !== 'completed' && (
+                      <TouchableOpacity
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={() => { setAssignTechTripId(trip.id); setAssignTechSelected(null); setAssignTechSearch(''); }}
+                      >
+                        <Ionicons name="person-add-outline" size={16} color={Colors.accent} />
+                      </TouchableOpacity>
+                    )}
                     {!trip.unassignedReason && (trip.technicianName ?? job?.technicianName) && trip.status !== 'completed' && (
                       <TouchableOpacity
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -1217,6 +1230,86 @@ export default function JobOverviewScreen({ route, navigation }) {
               {cancelling
                 ? <ActivityIndicator color={Colors.white} />
                 : <Text style={styles.cancelModalBtnText}>{isAdmin ? 'Remove Technician' : 'Confirm Cancellation'}</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Assign Technician modal */}
+      <Modal visible={!!assignTechTripId} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setAssignTechTripId(null)}>
+        <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Colors.screenBg }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.cancelModalWrap}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Assign Technician</Text>
+              <TouchableOpacity onPress={() => setAssignTechTripId(null)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalLabel}>Search Technician</Text>
+            <View style={styles.techSearchBox}>
+              <Ionicons name="search-outline" size={16} color={Colors.gray} />
+              <TextInput
+                style={styles.techSearchInput}
+                value={assignTechSearch}
+                onChangeText={(t) => { setAssignTechSearch(t); setAssignTechSelected(null); }}
+                placeholder="Search technicians..."
+                placeholderTextColor={Colors.gray}
+                autoFocus
+              />
+            </View>
+
+            {assignTechSelected ? (
+              <View style={styles.techSelectedRow}>
+                <Ionicons name="person-circle-outline" size={20} color={Colors.accent} />
+                <Text style={styles.techSelectedName}>{assignTechSelected.full_name}</Text>
+                <TouchableOpacity onPress={() => { setAssignTechSelected(null); setAssignTechSearch(''); }}>
+                  <Ionicons name="close-circle" size={18} color={Colors.gray} />
+                </TouchableOpacity>
+              </View>
+            ) : assignTechSearch.length > 0 ? (
+              <View style={styles.techDropdown}>
+                {technicians
+                  .filter((t) => t.full_name?.toLowerCase().includes(assignTechSearch.toLowerCase()))
+                  .slice(0, 5)
+                  .map((t) => (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={styles.techDropdownItem}
+                      onPress={() => { setAssignTechSelected(t); setAssignTechSearch(t.full_name); }}
+                    >
+                      <Ionicons name="person-outline" size={14} color={Colors.textLight} />
+                      <Text style={styles.techDropdownText}>{t.full_name}</Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              style={[styles.cancelModalBtn, { backgroundColor: Colors.accent }, (!assignTechSelected || savingAssign) && { opacity: 0.45 }]}
+              disabled={!assignTechSelected || savingAssign}
+              onPress={async () => {
+                setSavingAssign(true);
+                try {
+                  const trip = job.trips.find((t) => t.id === assignTechTripId);
+                  await updateTrip(job.id, assignTechTripId, {
+                    scheduledAt: trip?.scheduledAt,
+                    scopeOfWork: trip?.scopeOfWork ?? '',
+                    technicianId: assignTechSelected.id,
+                    technicianName: assignTechSelected.full_name,
+                  });
+                  setAssignTechTripId(null);
+                } catch (e) {
+                  Alert.alert('Error', e.message);
+                } finally {
+                  setSavingAssign(false);
+                }
+              }}
+            >
+              {savingAssign
+                ? <ActivityIndicator color={Colors.white} />
+                : <Text style={styles.cancelModalBtnText}>Assign Technician</Text>
               }
             </TouchableOpacity>
           </View>
@@ -1530,4 +1623,27 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   cancelModalBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
+
+  techSearchBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: Colors.white, borderRadius: 8, borderWidth: 1, borderColor: Colors.lightGray,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
+  },
+  techSearchInput: { flex: 1, fontSize: 14, color: Colors.text },
+  techSelectedRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: Colors.accent + '12', borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
+  },
+  techSelectedName: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.accent },
+  techDropdown: {
+    backgroundColor: Colors.white, borderRadius: 8, borderWidth: 1, borderColor: Colors.lightGray,
+    marginBottom: 8, overflow: 'hidden',
+  },
+  techDropdownItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 12, paddingVertical: 11,
+    borderBottomWidth: 1, borderBottomColor: Colors.lightGray,
+  },
+  techDropdownText: { fontSize: 14, color: Colors.text },
 });

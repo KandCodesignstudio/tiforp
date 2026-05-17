@@ -196,18 +196,25 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       .eq('id', jobId);
   };
 
-  const updateTrip = async (jobId, tripId, { scheduledAt, scopeOfWork }) => {
+  const updateTrip = async (jobId, tripId, { scheduledAt, scopeOfWork, technicianId, technicianName }) => {
     const job = jobs.find((j) => j.id === jobId);
     if (!job) return;
-    const updatedTrips = job.trips.map((t) =>
-      t.id === tripId
-        ? { ...t, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null, scopeOfWork: (scopeOfWork ?? '').trim() }
-        : { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt }
-    );
+    const updatedTrips = job.trips.map((t) => {
+      if (t.id !== tripId) return { ...t, scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt };
+      const patch = {
+        ...t,
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        scopeOfWork: (scopeOfWork ?? '').trim(),
+      };
+      if (technicianId !== undefined) patch.technicianId = technicianId;
+      if (technicianName !== undefined) patch.technicianName = technicianName;
+      return patch;
+    });
     const nextTripIso = updatedTrips
       .filter((t) => t.status === 'scheduled' && t.scheduledAt)
       .map((t) => t.scheduledAt)
       .sort()[0] ?? null;
+    const derivedTechId = deriveJobTech(updatedTrips);
 
     setJobs((prev) => prev.map((j) =>
       j.id === jobId
@@ -219,7 +226,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
         : j
     ));
 
-    await supabase.from('jobs').update({ trips: updatedTrips, next_trip: nextTripIso }).eq('id', jobId);
+    await supabase.from('jobs').update({ trips: updatedTrips, next_trip: nextTripIso, technician_id: derivedTechId }).eq('id', jobId);
   };
 
   const deleteTrip = async (jobId, tripId) => {
