@@ -24,7 +24,10 @@ import { submitReview } from '../hooks/useTechReviews';
 
 function formatDuration(fromDate, toDate) {
   if (!fromDate || !toDate) return null;
-  const mins = Math.round((toDate - fromDate) / 60000);
+  const from = fromDate instanceof Date ? fromDate : new Date(fromDate);
+  const to = toDate instanceof Date ? toDate : new Date(toDate);
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) return null;
+  const mins = Math.round((to - from) / 60000);
   if (mins < 1) return '< 1 min';
   if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
