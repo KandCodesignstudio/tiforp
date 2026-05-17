@@ -1006,13 +1006,14 @@ export default function JobOverviewScreen({ route, navigation }) {
                     <TouchableOpacity onPress={() => openEditTrip(trip)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
                     </TouchableOpacity>
-                    {/* Assign tech button — shown when trip has no tech and is not completed */}
-                    {!trip.technicianName && !trip.unassignedReason && trip.status !== 'completed' && (
+                    {/* Assign tech — always visible for non-completed trips, greyed out when tech already assigned */}
+                    {trip.status !== 'completed' && (
                       <TouchableOpacity
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        disabled={!!trip.technicianName}
                         onPress={() => { setAssignTechTripId(trip.id); setAssignTechSelected(null); setAssignTechSearch(''); }}
                       >
-                        <Ionicons name="person-add-outline" size={16} color={Colors.accent} />
+                        <Ionicons name="person-add-outline" size={16} color={trip.technicianName ? Colors.lightGray : Colors.accent} />
                       </TouchableOpacity>
                     )}
                     {!trip.unassignedReason && (trip.technicianName ?? job?.technicianName) && trip.status !== 'completed' && (
