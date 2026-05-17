@@ -1293,7 +1293,7 @@ export default function JobOverviewScreen({ route, navigation }) {
                   .slice(0, 5)
                   .map((t) => (
                     <TouchableOpacity
-                      key={t.id}
+                      key={t.id ?? t.full_name}
                       style={styles.techDropdownItem}
                       onPress={() => { setAssignTechSelected(t); setAssignTechSearch(t.full_name); }}
                     >

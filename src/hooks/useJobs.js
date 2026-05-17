@@ -218,7 +218,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       .filter((t) => t.status === 'scheduled' && t.scheduledAt)
       .map((t) => t.scheduledAt)
       .sort()[0] ?? null;
-    const derivedTechId = deriveJobTech(updatedTrips);
+    const derived = deriveJobTech(updatedTrips);
 
     setJobs((prev) => prev.map((j) =>
       j.id === jobId
@@ -230,7 +230,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
         : j
     ));
 
-    await supabase.from('jobs').update({ trips: updatedTrips, next_trip: nextTripIso, technician_id: derivedTechId }).eq('id', jobId);
+    await supabase.from('jobs').update({ trips: updatedTrips, next_trip: nextTripIso, technician_id: derived.id }).eq('id', jobId);
 
     const actor = userProfile?.full_name ?? 'Admin';
     const tripObj = job.trips.find((t) => t.id === tripId);
