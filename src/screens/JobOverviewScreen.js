@@ -465,15 +465,7 @@ export default function JobOverviewScreen({ route, navigation }) {
 
       <View style={[styles.jobStatusBanner, { backgroundColor: jobStatusInfo.color + '15', borderColor: jobStatusInfo.color }]}>
         <Text style={styles.jobNumberBanner}>{jobNumber}</Text>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[styles.jobStatusBannerText, { color: jobStatusInfo.color }]}>{jobStatusInfo.label}</Text>
-          {totalOnsiteLabel ? (
-            <View style={styles.totalOnsitePill}>
-              <Ionicons name="time-outline" size={12} color={Colors.textLight} />
-              <Text style={styles.totalOnsiteText}>{totalOnsiteLabel} onsite</Text>
-            </View>
-          ) : null}
-        </View>
+        <Text style={[styles.jobStatusBannerText, { color: jobStatusInfo.color }]}>{jobStatusInfo.label}</Text>
       </View>
 
       {isAdmin && (
@@ -864,36 +856,6 @@ export default function JobOverviewScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* Event History — admin only */}
-      {isAdmin && (
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-            onPress={() => setShowEventHistory((v) => !v)}
-          >
-            <Text style={styles.sectionLabel}>Event History {jobEvents.length > 0 ? `(${jobEvents.length})` : ''}</Text>
-            <Ionicons name={showEventHistory ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.textLight} />
-          </TouchableOpacity>
-          {showEventHistory && (
-            jobEvents.length === 0
-              ? <Text style={{ fontSize: 13, color: Colors.textLight, marginTop: 10, fontStyle: 'italic' }}>No events logged yet.</Text>
-              : jobEvents.map((ev) => (
-                <View key={ev.id} style={styles.eventRow}>
-                  <View style={styles.eventDot} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.eventDesc}>{ev.description}</Text>
-                    <Text style={styles.eventMeta}>
-                      {ev.actor_name ? `${ev.actor_name}  ·  ` : ''}
-                      {ev.created_at ? new Date(ev.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
-                    </Text>
-                  </View>
-                </View>
-              ))
-          )}
-        </View>
-      )}
-
-
       {isAdmin && (
         <TouchableOpacity
           style={styles.exportBtn}
@@ -1046,6 +1008,46 @@ export default function JobOverviewScreen({ route, navigation }) {
           );
         })}
       </View>
+
+      {/* Total hours onsite summary */}
+      {totalOnsiteLabel && (
+        <View style={styles.totalHoursCard}>
+          <Ionicons name="time-outline" size={22} color={Colors.accent} />
+          <View style={{ marginLeft: 12 }}>
+            <Text style={styles.totalHoursLabel}>Total Time Onsite</Text>
+            <Text style={styles.totalHoursValue}>{totalOnsiteLabel}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Event History — admin only, always at the very bottom */}
+      {isAdmin && (
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+            onPress={() => setShowEventHistory((v) => !v)}
+          >
+            <Text style={styles.sectionLabel}>Event History {jobEvents.length > 0 ? `(${jobEvents.length})` : ''}</Text>
+            <Ionicons name={showEventHistory ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.textLight} />
+          </TouchableOpacity>
+          {showEventHistory && (
+            jobEvents.length === 0
+              ? <Text style={{ fontSize: 13, color: Colors.textLight, marginTop: 10, fontStyle: 'italic' }}>No events logged yet.</Text>
+              : jobEvents.map((ev) => (
+                <View key={ev.id} style={styles.eventRow}>
+                  <View style={styles.eventDot} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.eventDesc}>{ev.description}</Text>
+                    <Text style={styles.eventMeta}>
+                      {ev.actor_name ? `${ev.actor_name}  ·  ` : ''}
+                      {ev.created_at ? new Date(ev.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
+                    </Text>
+                  </View>
+                </View>
+              ))
+          )}
+        </View>
+      )}
 
       {/* Edit trip modal */}
       <Modal visible={!!editingTrip} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditingTrip(null)}>
@@ -1245,8 +1247,19 @@ const styles = StyleSheet.create({
   },
   jobNumberBanner: { fontSize: 14, fontWeight: '700', color: Colors.text },
   jobStatusBannerText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  totalOnsitePill: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
-  totalOnsiteText: { fontSize: 11, color: Colors.textLight, fontWeight: '600' },
+  totalHoursCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.accent + '12',
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
+  },
+  totalHoursLabel: { fontSize: 12, color: Colors.textLight, fontWeight: '600', marginBottom: 2 },
+  totalHoursValue: { fontSize: 22, fontWeight: '800', color: Colors.accent },
   mapContainer: { height: 180, borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
   map: { width: '100%', height: 180 },
   mapOpenBtn: {
