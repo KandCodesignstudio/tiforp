@@ -94,10 +94,10 @@ export function useNotes(jobId) {
   const deleteNote = async (id) => {
     const prev = notes;
     setNotes((n) => n.filter((note) => note.id !== id));
-    const { error } = await supabase.from('notes').delete().eq('id', id);
-    if (error) {
-      setNotes(prev); // rollback
-      throw error;
+    const { error, count } = await supabase.from('notes').delete({ count: 'exact' }).eq('id', id);
+    if (error || count === 0) {
+      setNotes(prev); // rollback — either an error or RLS silently blocked it
+      throw error ?? new Error('Delete was blocked — check Supabase RLS policy on the notes table');
     }
   };
 
