@@ -4,6 +4,13 @@ import { rollupJobStatus, getTripStatus } from '../utils/status';
 import { notifyAdmins, notifyUser } from '../utils/notifications';
 import { logJobEvent } from './useJobEvents';
 
+function deriveJobTech(trips) {
+  const active = [...(trips ?? [])].reverse()
+    .find((t) => t.status !== 'completed' && t.status !== 'for_return' && t.technicianId);
+  if (active) return { id: active.technicianId, name: active.technicianName };
+  return { id: null, name: null };
+}
+
 function transformJob(row) {
   return {
     id: row.id,
@@ -168,11 +175,15 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       .map((t) => t.scheduledAt)
       .sort()[0] ?? null;
 
+    const derived = deriveJobTech(updatedTrips);
+
     setJobs((prev) => prev.map((j) =>
       j.id === jobId
         ? {
             ...j,
             status: newJobStatus,
+            technicianId: derived.id,
+            technicianName: derived.name,
             trips: updatedTrips.map((t) => ({ ...t, scheduledAt: t.scheduledAt ? new Date(t.scheduledAt) : null })),
             nextTrip: nextTripIso ? new Date(nextTripIso) : null,
           }
@@ -181,7 +192,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
 
     await supabase
       .from('jobs')
-      .update({ trips: updatedTrips, status: newJobStatus, next_trip: nextTripIso })
+      .update({ trips: updatedTrips, status: newJobStatus, next_trip: nextTripIso, technician_id: derived.id, metadata: { ...(job.metadata ?? {}), technicianName: derived.name } })
       .eq('id', jobId);
   };
 
@@ -282,20 +293,21 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       }
     );
     const newJobStatus = rollupJobStatus(updatedTrips);
+    const derived = deriveJobTech(updatedTrips);
 
     setJobs((prev) => prev.map((j) =>
       j.id !== jobId ? j : {
         ...j,
-        technicianId: null,
-        technicianName: null,
+        technicianId: derived.id,
+        technicianName: derived.name,
         status: newJobStatus,
         trips: updatedTrips.map(deserializeTrip),
       }
     ));
 
     await supabase.from('jobs').update({
-      technician_id: null,
-      metadata: { ...(job.metadata ?? {}), technicianName: null },
+      technician_id: derived.id,
+      metadata: { ...(job.metadata ?? {}), technicianName: derived.name },
       trips: updatedTrips,
       status: newJobStatus,
     }).eq('id', jobId);
@@ -408,20 +420,21 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
 
     const updatedTrips = job.trips.map((t) => t.id !== tripId ? serializeTrip(t) : freshTrip);
     const newJobStatus = rollupJobStatus(updatedTrips);
+    const derived = deriveJobTech(updatedTrips);
 
     setJobs((prev) => prev.map((j) =>
       j.id !== jobId ? j : {
         ...j,
-        technicianId: null,
-        technicianName: null,
+        technicianId: derived.id,
+        technicianName: derived.name,
         status: newJobStatus,
         trips: updatedTrips.map(deserializeTrip),
       }
     ));
 
     await supabase.from('jobs').update({
-      technician_id: null,
-      metadata: { ...(job.metadata ?? {}), technicianName: null },
+      technician_id: derived.id,
+      metadata: { ...(job.metadata ?? {}), technicianName: derived.name },
       trips: updatedTrips,
       status: newJobStatus,
     }).eq('id', jobId);

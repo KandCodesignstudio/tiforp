@@ -1,17 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
-import { useProfiles } from '../hooks/useProfiles';
 import DateTimePickerField from '../components/DateTimePicker';
 import { Colors } from '../utils/colors';
 
 export default function CreateJobScreen({ navigation }) {
-  const { technicians, loading: loadingTechs } = useProfiles();
-
   const [jobNumber, setJobNumber] = useState('');
   const [clientName, setClientName] = useState('');
   const [storeNumber, setStoreNumber] = useState('');
@@ -19,23 +15,11 @@ export default function CreateJobScreen({ navigation }) {
   const [description, setDescription] = useState('');
   const [scopeOfWork, setScopeOfWork] = useState('');
   const [scheduledAt, setScheduledAt] = useState(null);
-  const [selectedTech, setSelectedTech] = useState(null);
-  const [techSearch, setTechSearch] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const filteredTechs = useMemo(() => {
-    const q = techSearch.trim().toLowerCase();
-    if (!q) return [];
-    return technicians.filter((t) => (t.full_name ?? '').toLowerCase().includes(q));
-  }, [technicians, techSearch]);
 
   const handleSave = async () => {
     if (!jobNumber.trim() || !clientName.trim() || !address.trim() || !description.trim()) {
       Alert.alert('Missing Fields', 'Please fill in Job Number, Client Name, Address, and Description.');
-      return;
-    }
-    if (!selectedTech) {
-      Alert.alert('No Technician', 'Please select a technician to assign this job to.');
       return;
     }
 
@@ -50,8 +34,8 @@ export default function CreateJobScreen({ navigation }) {
     const job = {
       job_number: jobNumber.trim(),
       status: 'in_progress',
-      technician_id: selectedTech.id ?? null,
-      metadata: { technicianName: selectedTech.full_name ?? null },
+      technician_id: null,
+      metadata: {},
       client: {
         name: clientName.trim().toUpperCase(),
         storeNumber: storeNumber.trim(),
@@ -67,7 +51,7 @@ export default function CreateJobScreen({ navigation }) {
       setSaving(true);
       const { error } = await supabase.from('jobs').insert(job);
       if (error) throw error;
-      Alert.alert('Job Created', `Job ${jobNumber} assigned to ${selectedTech.full_name}.`, [
+      Alert.alert('Job Created', `Job ${jobNumber} created.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
@@ -112,70 +96,8 @@ export default function CreateJobScreen({ navigation }) {
         <Text style={styles.label}>Scope of Work</Text>
         <TextInput style={[styles.input, styles.multiline]} value={scopeOfWork} onChangeText={setScopeOfWork} placeholder="List tasks, one per line" placeholderTextColor={Colors.gray} multiline numberOfLines={4} />
 
-        <Text style={styles.section}>Assign Technician</Text>
-
-        {selectedTech && (
-          <View style={styles.selectedBanner}>
-            <View style={styles.techAvatar}>
-              <Text style={styles.techAvatarText}>{selectedTech.full_name[0].toUpperCase()}</Text>
-            </View>
-            <Text style={styles.selectedName}>{selectedTech.full_name}</Text>
-            <TouchableOpacity onPress={() => setSelectedTech(null)}>
-              <Ionicons name="close-circle" size={20} color={Colors.textLight} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.searchRow}>
-          <Ionicons name="search" size={16} color={Colors.textLight} style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            value={techSearch}
-            onChangeText={setTechSearch}
-            placeholder="Search technicians…"
-            placeholderTextColor={Colors.gray}
-            autoCorrect={false}
-          />
-          {techSearch.length > 0 && (
-            <TouchableOpacity onPress={() => setTechSearch('')}>
-              <Ionicons name="close-circle" size={16} color={Colors.textLight} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {loadingTechs ? (
-          <ActivityIndicator color={Colors.accent} style={{ marginVertical: 16 }} />
-        ) : techSearch.trim().length === 0 ? null : filteredTechs.length === 0 ? (
-          <Text style={styles.noTechs}>No technicians match "{techSearch}".</Text>
-        ) : (
-          filteredTechs.map((tech) => {
-            const key = tech.id ?? tech.full_name;
-            const isSelected = selectedTech
-              ? (tech.id ? selectedTech.id === tech.id : selectedTech.full_name === tech.full_name)
-              : false;
-            return (
-              <TouchableOpacity
-                key={key}
-                style={[styles.techRow, isSelected && styles.techRowSelected]}
-                onPress={() => setSelectedTech(tech)}
-              >
-                <View style={styles.techAvatar}>
-                  <Text style={styles.techAvatarText}>
-                    {(tech.full_name || '?')[0].toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.techName}>{tech.full_name || '(No name)'}</Text>
-                  {tech.isStatic && <Text style={styles.techBadge}>Field tech</Text>}
-                </View>
-                {isSelected && <Text style={styles.checkmark}>✓</Text>}
-              </TouchableOpacity>
-            );
-          })
-        )}
-
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-          {saving ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.saveBtnText}>Create & Assign Job</Text>}
+          {saving ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.saveBtnText}>Create Job</Text>}
         </TouchableOpacity>
 
       </ScrollView>
@@ -211,55 +133,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.lightGray,
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  selectedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.accent,
-    gap: 10,
-  },
-  selectedName: { flex: 1, fontSize: 15, fontWeight: '700', color: Colors.text },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
-  },
-  searchInput: { flex: 1, fontSize: 14, color: Colors.text, padding: 0 },
-  techRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.lightGray,
-    gap: 12,
-  },
-  techRowSelected: { borderColor: Colors.accent, backgroundColor: '#EFF6FF' },
-  techAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  techAvatarText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
-  techName: { fontSize: 15, fontWeight: '600', color: Colors.text },
-  techBadge: { fontSize: 11, color: Colors.textLight, marginTop: 1 },
-  checkmark: { fontSize: 18, color: Colors.accent, fontWeight: '700' },
-  noTechs: { fontSize: 13, color: Colors.textLight, fontStyle: 'italic', marginBottom: 16 },
   saveBtn: {
     backgroundColor: Colors.accent,
     borderRadius: 10,

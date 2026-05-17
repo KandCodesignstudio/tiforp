@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
 
 export async function logJobEvent(jobId, type, description, actorName = null) {
-  await supabase.from('job_events').insert({ job_id: jobId, type, description, actor_name: actorName });
+  const { error } = await supabase.from('job_events').insert({ job_id: jobId, type, description, actor_name: actorName });
+  if (error) console.warn('logJobEvent error:', error.message, error.code);
 }
 
 export function useJobEvents(jobId) {

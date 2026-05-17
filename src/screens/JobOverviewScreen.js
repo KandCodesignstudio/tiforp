@@ -125,7 +125,7 @@ function MapWithPin({ address }) {
 export default function JobOverviewScreen({ route, navigation }) {
   const { jobId } = route.params;
   const { user, isAdmin, profile } = useAuth();
-  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, adminRemoveTechFromTrip, reassignTech, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
+  const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, unassignTechFromTrip, adminRemoveTechFromTrip, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { technicians } = useProfiles();
   const { events: jobEvents } = useJobEvents(job?.id);
   const { notes, refresh: refreshNotes } = useNotes(jobId);
@@ -144,9 +144,6 @@ export default function JobOverviewScreen({ route, navigation }) {
     supabase.from('tech_reviews').select('*').eq('job_id', jobId).maybeSingle()
       .then(({ data }) => { if (data) setJobReview(data); });
   }, [jobId]);
-  const [showReassign, setShowReassign] = useState(false);
-  const [reassignSearch, setReassignSearch] = useState('');
-  const [reassigning, setReassigning] = useState(false);
   const [showEventHistory, setShowEventHistory] = useState(true);
   const [cancelTripId, setCancelTripId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -154,6 +151,8 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
   const [newTripScope, setNewTripScope] = useState('');
+  const [newTripTech, setNewTripTech] = useState(null);
+  const [newTripTechSearch, setNewTripTechSearch] = useState('');
   const [savingTrip, setSavingTrip] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -482,15 +481,6 @@ export default function JobOverviewScreen({ route, navigation }) {
           <Ionicons name="location-outline" size={18} color={Colors.accent} style={styles.infoIcon} />
           <Text style={[styles.infoText, styles.infoLink]}>{client?.address}</Text>
         </TouchableOpacity>
-        {job.technicianName && (
-          <>
-            <View style={styles.divider} />
-            <View style={styles.infoRow}>
-              <Ionicons name="person-outline" size={18} color={Colors.accent} style={styles.infoIcon} />
-              <Text style={styles.infoText}>{job.technicianName}</Text>
-            </View>
-          </>
-        )}
       </View>
 
       <View style={styles.card}>
@@ -722,6 +712,48 @@ export default function JobOverviewScreen({ route, navigation }) {
               multiline
             />
 
+            <Text style={styles.modalLabel}>Assign Technician (optional)</Text>
+            {newTripTech ? (
+              <View style={styles.selectedTechBanner}>
+                <View style={styles.techPickAvatar}>
+                  <Text style={styles.techPickAvatarText}>{newTripTech.full_name[0].toUpperCase()}</Text>
+                </View>
+                <Text style={{ flex: 1, fontWeight: '700', color: Colors.text }}>{newTripTech.full_name}</Text>
+                <TouchableOpacity onPress={() => setNewTripTech(null)}>
+                  <Ionicons name="close-circle" size={20} color={Colors.textLight} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <View style={styles.searchRow2}>
+                  <Ionicons name="search" size={16} color={Colors.gray} style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={styles.searchInput2}
+                    value={newTripTechSearch}
+                    onChangeText={setNewTripTechSearch}
+                    placeholder="Search technicians…"
+                    placeholderTextColor={Colors.gray}
+                    autoCorrect={false}
+                  />
+                </View>
+                {newTripTechSearch.trim().length > 0 && technicians
+                  .filter((t) => (t.full_name ?? '').toLowerCase().includes(newTripTechSearch.trim().toLowerCase()))
+                  .map((tech) => (
+                    <TouchableOpacity
+                      key={tech.id ?? tech.full_name}
+                      style={styles.techPickRow}
+                      onPress={() => { setNewTripTech(tech); setNewTripTechSearch(''); }}
+                    >
+                      <View style={styles.techPickAvatar}>
+                        <Text style={styles.techPickAvatarText}>{(tech.full_name || '?')[0].toUpperCase()}</Text>
+                      </View>
+                      <Text style={styles.techPickName}>{tech.full_name}</Text>
+                    </TouchableOpacity>
+                  ))
+                }
+              </>
+            )}
+
             <View style={styles.modalBtnRow}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
@@ -729,6 +761,8 @@ export default function JobOverviewScreen({ route, navigation }) {
                   setShowAddTrip(false);
                   setNewTripDate(null);
                   setNewTripScope('');
+                  setNewTripTech(null);
+                  setNewTripTechSearch('');
                 }}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
@@ -743,10 +777,17 @@ export default function JobOverviewScreen({ route, navigation }) {
                   }
                   setSavingTrip(true);
                   try {
-                    await addTrip(job.id, { scheduledAt: newTripDate.toISOString(), scopeOfWork: newTripScope });
+                    await addTrip(job.id, {
+                      scheduledAt: newTripDate.toISOString(),
+                      scopeOfWork: newTripScope,
+                      technicianId: newTripTech?.id ?? null,
+                      technicianName: newTripTech?.full_name ?? null,
+                    });
                     setShowAddTrip(false);
                     setNewTripDate(null);
                     setNewTripScope('');
+                    setNewTripTech(null);
+                    setNewTripTechSearch('');
                   } catch (err) {
                     Alert.alert('Error', err.message);
                   } finally {
@@ -798,17 +839,6 @@ export default function JobOverviewScreen({ route, navigation }) {
             </View>
           </View>
         </View>
-      )}
-
-      {/* Reassign Technician — admin only */}
-      {isAdmin && status !== 'closed' && (
-        <TouchableOpacity
-          style={styles.reassignBtn}
-          onPress={() => { setReassignSearch(''); setShowReassign(true); }}
-        >
-          <Ionicons name="person-outline" size={18} color={Colors.primary} />
-          <Text style={styles.reassignBtnText}>Reassign Technician</Text>
-        </TouchableOpacity>
       )}
 
       {/* Event History — admin only */}
