@@ -680,14 +680,14 @@ export default function JobOverviewScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* Admin: schedule a follow-up trip when job needs return */}
-      {isAdmin && status === 'needs_followup' && (
+      {/* Admin: add a new trip at any time (except closed) */}
+      {isAdmin && status !== 'closed' && (
         <TouchableOpacity
           style={styles.addTripBtn}
-          onPress={() => setShowAddTrip(true)}
+          onPress={() => { setNewTripDate(null); setNewTripScope(''); setShowAddTrip(true); }}
         >
           <Ionicons name="add-circle-outline" size={18} color={Colors.white} />
-          <Text style={styles.addTripBtnText}>Add Next Trip</Text>
+          <Text style={styles.addTripBtnText}>Add New Trip</Text>
         </TouchableOpacity>
       )}
 
