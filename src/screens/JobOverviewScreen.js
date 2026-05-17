@@ -283,6 +283,21 @@ export default function JobOverviewScreen({ route, navigation }) {
   const hasSignature = !!tripSignature;
   const readyToSubmit = hasNotes && hasAttachments && hasSignature;
 
+  const totalOnsiteMins = (trips ?? []).reduce((sum, t) => {
+    if (!t.checkedInAt || !t.checkedOutAt) return sum;
+    const from = new Date(t.checkedInAt);
+    const to = new Date(t.checkedOutAt);
+    if (isNaN(from) || isNaN(to)) return sum;
+    return sum + Math.max(0, Math.round((to - from) / 60000));
+  }, 0);
+  const totalOnsiteLabel = totalOnsiteMins > 0
+    ? totalOnsiteMins < 60
+      ? `${totalOnsiteMins}m`
+      : totalOnsiteMins % 60 === 0
+        ? `${Math.floor(totalOnsiteMins / 60)}h`
+        : `${Math.floor(totalOnsiteMins / 60)}h ${totalOnsiteMins % 60}m`
+    : null;
+
   const callPhone = (phone) => Linking.openURL(`tel:${phone}`);
 
   function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -450,7 +465,15 @@ export default function JobOverviewScreen({ route, navigation }) {
 
       <View style={[styles.jobStatusBanner, { backgroundColor: jobStatusInfo.color + '15', borderColor: jobStatusInfo.color }]}>
         <Text style={styles.jobNumberBanner}>{jobNumber}</Text>
-        <Text style={[styles.jobStatusBannerText, { color: jobStatusInfo.color }]}>{jobStatusInfo.label}</Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.jobStatusBannerText, { color: jobStatusInfo.color }]}>{jobStatusInfo.label}</Text>
+          {totalOnsiteLabel ? (
+            <View style={styles.totalOnsitePill}>
+              <Ionicons name="time-outline" size={12} color={Colors.textLight} />
+              <Text style={styles.totalOnsiteText}>{totalOnsiteLabel} onsite</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
 
       {isAdmin && (
@@ -1222,6 +1245,8 @@ const styles = StyleSheet.create({
   },
   jobNumberBanner: { fontSize: 14, fontWeight: '700', color: Colors.text },
   jobStatusBannerText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  totalOnsitePill: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  totalOnsiteText: { fontSize: 11, color: Colors.textLight, fontWeight: '600' },
   mapContainer: { height: 180, borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
   map: { width: '100%', height: 180 },
   mapOpenBtn: {
