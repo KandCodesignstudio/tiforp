@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
 import { Colors } from '../utils/colors';
 
@@ -14,13 +15,27 @@ export default function EditJobScreen({ route, navigation }) {
   const [clientName, setClientName] = useState(job.client?.name ?? '');
   const [storeNumber, setStoreNumber] = useState(job.client?.storeNumber ?? '');
   const [address, setAddress] = useState(job.client?.address ?? '');
+  const [customFields, setCustomFields] = useState(
+    (job.metadata?.customFields ?? []).map((f, i) => ({ id: `cf_${i}`, ...f }))
+  );
   const [saving, setSaving] = useState(false);
+
+  const addField = () =>
+    setCustomFields((prev) => [...prev, { id: `cf_${Date.now()}`, label: '', value: '' }]);
+
+  const updateField = (id, key, text) =>
+    setCustomFields((prev) => prev.map((f) => (f.id === id ? { ...f, [key]: text } : f)));
+
+  const removeField = (id) =>
+    setCustomFields((prev) => prev.filter((f) => f.id !== id));
 
   const handleSave = async () => {
     if (!jobNumber.trim() || !clientName.trim() || !address.trim() || !description.trim()) {
       Alert.alert('Missing Fields', 'Please fill in Job Number, Client Name, Address, and Description.');
       return;
     }
+
+    const filledFields = customFields.filter((f) => f.label.trim());
 
     const payload = {
       job_number: jobNumber.trim(),
@@ -29,6 +44,10 @@ export default function EditJobScreen({ route, navigation }) {
         name: clientName.trim().toUpperCase(),
         storeNumber: storeNumber.trim(),
         address: address.trim(),
+      },
+      metadata: {
+        ...(job.metadata ?? {}),
+        customFields: filledFields.map(({ label, value }) => ({ label: label.trim(), value: value.trim() })),
       },
     };
 
@@ -67,6 +86,35 @@ export default function EditJobScreen({ route, navigation }) {
         <Text style={styles.label}>Address *</Text>
         <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="123 Main St, City, TX 75001" placeholderTextColor={Colors.gray} />
 
+        <Text style={styles.section}>Custom Fields</Text>
+
+        {customFields.map((field) => (
+          <View key={field.id} style={styles.fieldRow}>
+            <TextInput
+              style={[styles.input, styles.fieldLabel]}
+              value={field.label}
+              onChangeText={(t) => updateField(field.id, 'label', t)}
+              placeholder="Field name"
+              placeholderTextColor={Colors.gray}
+            />
+            <TextInput
+              style={[styles.input, styles.fieldValue]}
+              value={field.value}
+              onChangeText={(t) => updateField(field.id, 'value', t)}
+              placeholder="Value"
+              placeholderTextColor={Colors.gray}
+            />
+            <TouchableOpacity style={styles.fieldDelete} onPress={() => removeField(field.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={20} color={Colors.gray} />
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <TouchableOpacity style={styles.addFieldBtn} onPress={addField}>
+          <Ionicons name="add-circle-outline" size={18} color={Colors.accent} />
+          <Text style={styles.addFieldText}>Add Field</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.saveBtnText}>Save Changes</Text>}
         </TouchableOpacity>
@@ -104,6 +152,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.lightGray,
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
+
+  fieldRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  fieldLabel: { flex: 2, marginBottom: 10 },
+  fieldValue: { flex: 3, marginBottom: 10 },
+  fieldDelete: { paddingTop: 12 },
+
+  addFieldBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 10, marginBottom: 4,
+  },
+  addFieldText: { fontSize: 14, fontWeight: '600', color: Colors.accent },
+
   saveBtn: {
     backgroundColor: Colors.accent,
     borderRadius: 10,

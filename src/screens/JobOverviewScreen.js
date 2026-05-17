@@ -506,6 +506,18 @@ export default function JobOverviewScreen({ route, navigation }) {
         <Text style={styles.description}>{description}</Text>
       </View>
 
+      {/* Custom fields */}
+      {(job.metadata?.customFields ?? []).length > 0 && (
+        <View style={styles.card}>
+          {(job.metadata.customFields).map((field, idx) => (
+            <View key={idx} style={[styles.customFieldRow, idx > 0 && { borderTopWidth: 1, borderTopColor: Colors.lightGray, marginTop: 10, paddingTop: 10 }]}>
+              <Text style={styles.customFieldLabel}>{field.label}</Text>
+              <Text style={styles.customFieldValue}>{field.value || '—'}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Pending approval — tech view with undo option */}
       {!isAdmin && pendingTrips.length > 0 && pendingTrips.map((trip) => (
         <View key={trip.id} style={styles.approvalBanner}>
@@ -1340,6 +1352,10 @@ const styles = StyleSheet.create({
   },
   jobNumberBanner: { fontSize: 14, fontWeight: '700', color: Colors.text },
   jobStatusBannerText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  customFieldRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
+  customFieldLabel: { fontSize: 13, fontWeight: '600', color: Colors.textLight, flex: 1 },
+  customFieldValue: { fontSize: 14, color: Colors.text, fontWeight: '500', flex: 2, textAlign: 'right' },
+
   totalHoursCard: {
     flexDirection: 'row',
     alignItems: 'center',

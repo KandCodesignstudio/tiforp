@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
 import DateTimePickerField from '../components/DateTimePicker';
 import { Colors } from '../utils/colors';
@@ -15,7 +16,17 @@ export default function CreateJobScreen({ navigation }) {
   const [description, setDescription] = useState('');
   const [scopeOfWork, setScopeOfWork] = useState('');
   const [scheduledAt, setScheduledAt] = useState(null);
+  const [customFields, setCustomFields] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  const addField = () =>
+    setCustomFields((prev) => [...prev, { id: `cf_${Date.now()}`, label: '', value: '' }]);
+
+  const updateField = (id, key, text) =>
+    setCustomFields((prev) => prev.map((f) => (f.id === id ? { ...f, [key]: text } : f)));
+
+  const removeField = (id) =>
+    setCustomFields((prev) => prev.filter((f) => f.id !== id));
 
   const handleSave = async () => {
     if (!jobNumber.trim() || !clientName.trim() || !address.trim() || !description.trim()) {
@@ -31,11 +42,13 @@ export default function CreateJobScreen({ navigation }) {
       scopeOfWork: scopeOfWork.trim(),
     };
 
+    const filledFields = customFields.filter((f) => f.label.trim());
+
     const job = {
       job_number: jobNumber.trim(),
       status: 'in_progress',
       technician_id: null,
-      metadata: {},
+      metadata: { customFields: filledFields.map(({ label, value }) => ({ label: label.trim(), value: value.trim() })) },
       client: {
         name: clientName.trim().toUpperCase(),
         storeNumber: storeNumber.trim(),
@@ -96,6 +109,37 @@ export default function CreateJobScreen({ navigation }) {
         <Text style={styles.label}>Scope of Work</Text>
         <TextInput style={[styles.input, styles.multiline]} value={scopeOfWork} onChangeText={setScopeOfWork} placeholder="List tasks, one per line" placeholderTextColor={Colors.gray} multiline numberOfLines={4} />
 
+        <View style={styles.sectionRow}>
+          <Text style={styles.section}>Custom Fields</Text>
+        </View>
+
+        {customFields.map((field) => (
+          <View key={field.id} style={styles.fieldRow}>
+            <TextInput
+              style={[styles.input, styles.fieldLabel]}
+              value={field.label}
+              onChangeText={(t) => updateField(field.id, 'label', t)}
+              placeholder="Field name"
+              placeholderTextColor={Colors.gray}
+            />
+            <TextInput
+              style={[styles.input, styles.fieldValue]}
+              value={field.value}
+              onChangeText={(t) => updateField(field.id, 'value', t)}
+              placeholder="Value"
+              placeholderTextColor={Colors.gray}
+            />
+            <TouchableOpacity style={styles.fieldDelete} onPress={() => removeField(field.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={20} color={Colors.gray} />
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <TouchableOpacity style={styles.addFieldBtn} onPress={addField}>
+          <Ionicons name="add-circle-outline" size={18} color={Colors.accent} />
+          <Text style={styles.addFieldText}>Add Field</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.saveBtnText}>Create Job</Text>}
         </TouchableOpacity>
@@ -108,6 +152,7 @@ export default function CreateJobScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.screenBg },
   content: { padding: 20, paddingBottom: 48 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   section: {
     fontSize: 13,
     fontWeight: '700',
@@ -119,6 +164,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.lightGray,
     paddingBottom: 6,
+    flex: 1,
   },
   label: { fontSize: 13, fontWeight: '600', color: Colors.darkGray, marginBottom: 4 },
   input: {
@@ -133,6 +179,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.lightGray,
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
+
+  fieldRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  fieldLabel: { flex: 2, marginBottom: 10 },
+  fieldValue: { flex: 3, marginBottom: 10 },
+  fieldDelete: { paddingTop: 12 },
+
+  addFieldBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 10, marginBottom: 4,
+  },
+  addFieldText: { fontSize: 14, fontWeight: '600', color: Colors.accent },
+
   saveBtn: {
     backgroundColor: Colors.accent,
     borderRadius: 10,
