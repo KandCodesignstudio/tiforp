@@ -870,73 +870,6 @@ export default function JobOverviewScreen({ route, navigation }) {
         </View>
       )}
 
-      {/* Reassign modal */}
-      <Modal visible={showReassign} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowReassign(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Reassign Technician</Text>
-            <TouchableOpacity onPress={() => setShowReassign(false)}>
-              <Ionicons name="close" size={24} color={Colors.text} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.modalSub}>Currently assigned: <Text style={{ fontWeight: '700' }}>{job?.technicianName ?? 'None'}</Text></Text>
-          <View style={styles.searchRow2}>
-            <Ionicons name="search" size={16} color={Colors.gray} style={{ marginRight: 8 }} />
-            <TextInput
-              style={styles.searchInput2}
-              value={reassignSearch}
-              onChangeText={setReassignSearch}
-              placeholder="Search technicians…"
-              placeholderTextColor={Colors.gray}
-              autoCorrect={false}
-              autoFocus
-            />
-          </View>
-          <ScrollView>
-            {(reassignSearch.trim()
-              ? technicians.filter((t) => (t.full_name ?? '').toLowerCase().includes(reassignSearch.trim().toLowerCase()))
-              : technicians
-            ).map((tech) => (
-              <TouchableOpacity
-                key={tech.id ?? tech.full_name}
-                style={styles.techPickRow}
-                disabled={reassigning}
-                onPress={() => {
-                  Alert.alert(
-                    'Reassign Technician',
-                    `Replace ${job?.technicianName ?? 'current tech'} with ${tech.full_name}? The active trip will be reset to Scheduled.`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Reassign',
-                        style: 'destructive',
-                        onPress: async () => {
-                          setReassigning(true);
-                          try {
-                            await reassignTech(job.id, tech, profile?.full_name ?? 'Admin');
-                            setShowReassign(false);
-                          } catch (e) {
-                            Alert.alert('Error', e.message);
-                          } finally {
-                            setReassigning(false);
-                          }
-                        },
-                      },
-                    ]
-                  );
-                }}
-              >
-                <View style={styles.techPickAvatar}>
-                  <Text style={styles.techPickAvatarText}>{(tech.full_name || '?')[0].toUpperCase()}</Text>
-                </View>
-                <Text style={styles.techPickName}>{tech.full_name}</Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.gray} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          {reassigning && <ActivityIndicator color={Colors.accent} style={{ margin: 16 }} />}
-        </View>
-      </Modal>
 
       {isAdmin && (
         <TouchableOpacity
@@ -1370,12 +1303,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   closeJobBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },
-  reassignBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: Colors.white, borderRadius: 10, paddingVertical: 13, marginBottom: 12,
-    borderWidth: 1.5, borderColor: Colors.primary,
+  selectedTechBanner: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF',
+    borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1.5,
+    borderColor: Colors.accent, gap: 10,
   },
-  reassignBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
   modalSub: { fontSize: 13, color: Colors.textLight, marginHorizontal: 20, marginBottom: 12 },
   searchRow2: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.screenBg,
