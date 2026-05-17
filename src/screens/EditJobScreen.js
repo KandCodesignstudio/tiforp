@@ -72,8 +72,8 @@ export default function EditJobScreen({ route, navigation }) {
         <Text style={styles.label}>Job Number *</Text>
         <TextInput style={styles.input} value={jobNumber} onChangeText={setJobNumber} placeholder="e.g. 25S00113" placeholderTextColor={Colors.gray} />
 
-        <Text style={styles.label}>Description *</Text>
-        <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} placeholder="Describe the work to be done" placeholderTextColor={Colors.gray} multiline numberOfLines={3} />
+        <Text style={styles.label}>Title *</Text>
+        <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} placeholder="Brief title for the job" placeholderTextColor={Colors.gray} multiline numberOfLines={3} />
 
         <Text style={styles.section}>Client Info</Text>
 

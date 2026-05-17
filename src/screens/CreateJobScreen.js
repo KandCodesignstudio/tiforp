@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../config/supabase';
-import DateTimePickerField from '../components/DateTimePicker';
 import { Colors } from '../utils/colors';
 
 export default function CreateJobScreen({ navigation }) {
@@ -14,8 +13,6 @@ export default function CreateJobScreen({ navigation }) {
   const [storeNumber, setStoreNumber] = useState('');
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
-  const [scopeOfWork, setScopeOfWork] = useState('');
-  const [scheduledAt, setScheduledAt] = useState(null);
   const [customFields, setCustomFields] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -37,9 +34,9 @@ export default function CreateJobScreen({ navigation }) {
     const trip = {
       id: `trip_${Date.now()}`,
       tripNumber: 1,
-      scheduledAt: scheduledAt ? scheduledAt.toISOString() : null,
+      scheduledAt: null,
       status: 'scheduled',
-      scopeOfWork: scopeOfWork.trim(),
+      scopeOfWork: '',
     };
 
     const filledFields = customFields.filter((f) => f.label.trim());
@@ -83,8 +80,8 @@ export default function CreateJobScreen({ navigation }) {
         <Text style={styles.label}>Job Number *</Text>
         <TextInput style={styles.input} value={jobNumber} onChangeText={setJobNumber} placeholder="e.g. 25S00113" placeholderTextColor={Colors.gray} />
 
-        <Text style={styles.label}>Description *</Text>
-        <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} placeholder="Describe the work to be done" placeholderTextColor={Colors.gray} multiline numberOfLines={3} />
+        <Text style={styles.label}>Title *</Text>
+        <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} placeholder="Brief title for the job" placeholderTextColor={Colors.gray} multiline numberOfLines={3} />
 
         <Text style={styles.section}>Client Info</Text>
 
@@ -96,18 +93,6 @@ export default function CreateJobScreen({ navigation }) {
 
         <Text style={styles.label}>Address *</Text>
         <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="123 Main St, City, TX 75001" placeholderTextColor={Colors.gray} />
-
-        <Text style={styles.section}>Trip 1</Text>
-
-        <Text style={styles.label}>Scheduled Date & Time</Text>
-        <DateTimePickerField
-          value={scheduledAt}
-          onChange={setScheduledAt}
-          placeholder="Tap to select date & time"
-        />
-
-        <Text style={styles.label}>Scope of Work</Text>
-        <TextInput style={[styles.input, styles.multiline]} value={scopeOfWork} onChangeText={setScopeOfWork} placeholder="List tasks, one per line" placeholderTextColor={Colors.gray} multiline numberOfLines={4} />
 
         <View style={styles.sectionRow}>
           <Text style={styles.section}>Custom Fields</Text>

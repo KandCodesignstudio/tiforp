@@ -554,14 +554,14 @@ export default function JobOverviewScreen({ route, navigation }) {
         <View key={trip.id} style={styles.approvalBanner}>
           <View style={styles.approvalBannerLeft}>
             <Ionicons name="time-outline" size={20} color="#92400e" />
-            <View style={{ marginLeft: 10 }}>
+            <View style={{ marginLeft: 10, flex: 1 }}>
               <Text style={styles.approvalBannerTitle}>Trip {trip.tripNumber} — Awaiting Your Approval</Text>
               <Text style={styles.approvalBannerSub}>Review notes and photos before approving.</Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={styles.approvalBannerBtns}>
             <TouchableOpacity
-              style={styles.sendBackBtn}
+              style={[styles.approvalBannerBtn, styles.sendBackBtn]}
               onPress={() =>
                 Alert.alert(
                   'Send Back to Tech',
@@ -576,7 +576,7 @@ export default function JobOverviewScreen({ route, navigation }) {
               <Text style={styles.sendBackBtnText}>Send Back</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.approvalBtn}
+              style={[styles.approvalBannerBtn, styles.approvalBtn]}
               onPress={() => handleAdvanceStatus(trip)}
             >
               <Text style={styles.approvalBtnText}>Approve</Text>
@@ -1556,11 +1556,11 @@ const styles = StyleSheet.create({
     borderColor: '#f59e0b',
     padding: 14,
     marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
   },
-  approvalBannerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  approvalBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  approvalBannerBtns: { flexDirection: 'row', gap: 8 },
+  approvalBannerBtn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 8 },
   approvalBannerTitle: { fontSize: 13, fontWeight: '700', color: '#92400e' },
   approvalBannerSub: { fontSize: 11, color: '#b45309', marginTop: 2 },
   approvalBtn: {
