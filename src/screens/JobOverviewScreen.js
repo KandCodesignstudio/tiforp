@@ -147,7 +147,7 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [showReassign, setShowReassign] = useState(false);
   const [reassignSearch, setReassignSearch] = useState('');
   const [reassigning, setReassigning] = useState(false);
-  const [showEventHistory, setShowEventHistory] = useState(false);
+  const [showEventHistory, setShowEventHistory] = useState(true);
   const [cancelTripId, setCancelTripId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -812,27 +812,31 @@ export default function JobOverviewScreen({ route, navigation }) {
       )}
 
       {/* Event History — admin only */}
-      {isAdmin && jobEvents.length > 0 && (
+      {isAdmin && (
         <View style={styles.card}>
           <TouchableOpacity
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
             onPress={() => setShowEventHistory((v) => !v)}
           >
-            <Text style={styles.sectionLabel}>Event History ({jobEvents.length})</Text>
+            <Text style={styles.sectionLabel}>Event History {jobEvents.length > 0 ? `(${jobEvents.length})` : ''}</Text>
             <Ionicons name={showEventHistory ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.textLight} />
           </TouchableOpacity>
-          {showEventHistory && jobEvents.map((ev) => (
-            <View key={ev.id} style={styles.eventRow}>
-              <View style={styles.eventDot} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.eventDesc}>{ev.description}</Text>
-                <Text style={styles.eventMeta}>
-                  {ev.actor_name ? `${ev.actor_name}  ·  ` : ''}
-                  {ev.created_at ? new Date(ev.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
-                </Text>
-              </View>
-            </View>
-          ))}
+          {showEventHistory && (
+            jobEvents.length === 0
+              ? <Text style={{ fontSize: 13, color: Colors.textLight, marginTop: 10, fontStyle: 'italic' }}>No events logged yet.</Text>
+              : jobEvents.map((ev) => (
+                <View key={ev.id} style={styles.eventRow}>
+                  <View style={styles.eventDot} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.eventDesc}>{ev.description}</Text>
+                    <Text style={styles.eventMeta}>
+                      {ev.actor_name ? `${ev.actor_name}  ·  ` : ''}
+                      {ev.created_at ? new Date(ev.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : ''}
+                    </Text>
+                  </View>
+                </View>
+              ))
+          )}
         </View>
       )}
 

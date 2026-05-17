@@ -18,7 +18,8 @@ export function useJobEvents(jobId) {
       .eq('job_id', jobId)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
-        if (!error) setEvents(data ?? []);
+        if (error) console.warn('job_events fetch error:', error.message, error.code);
+        else setEvents(data ?? []);
         setLoading(false);
       });
 
