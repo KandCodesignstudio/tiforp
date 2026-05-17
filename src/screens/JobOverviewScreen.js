@@ -34,7 +34,9 @@ function formatDuration(fromDate, toDate) {
 
 function formatTime(date) {
   if (!date) return null;
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 function StarDisplay({ rating, size = 16 }) {
