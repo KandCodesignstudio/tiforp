@@ -300,11 +300,24 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       status: newJobStatus,
     }).eq('id', jobId);
 
-    notifyAdmins(
-      'Tech Cancelled — Action Required',
-      `${techName} cancelled Trip ${tripLabel} on job ${job.jobNumber ?? jobId}. Reason: ${reason}`,
-      { jobId }
-    ).catch(() => {});
+    const oldTechId = trip?.technicianId ?? job.technicianId;
+    if (isAdmin) {
+      // Admin removed the tech — notify the tech
+      if (oldTechId) {
+        notifyUser(oldTechId,
+          'Removed from Trip',
+          `You have been removed from Trip ${tripLabel} on job ${job.jobNumber ?? jobId}. Reason: ${reason}`,
+          { jobId }
+        ).catch(() => {});
+      }
+    } else {
+      // Tech cancelled — notify admins
+      notifyAdmins(
+        'Tech Cancelled — Action Required',
+        `${techName} cancelled Trip ${tripLabel} on job ${job.jobNumber ?? jobId}. Reason: ${reason}`,
+        { jobId }
+      ).catch(() => {});
+    }
 
     logJobEvent(jobId, 'unassigned',
       `${techName} removed from Trip ${tripLabel} — Reason: ${reason}`,

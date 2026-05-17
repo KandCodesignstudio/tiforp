@@ -1038,6 +1038,14 @@ export default function JobOverviewScreen({ route, navigation }) {
                     <TouchableOpacity onPress={() => openEditTrip(trip)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
                     </TouchableOpacity>
+                    {!trip.unassignedReason && (trip.technicianName ?? job?.technicianName) && trip.status !== 'completed' && (
+                      <TouchableOpacity
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={() => { setCancelTripId(trip.id); setCancelReason(''); }}
+                      >
+                        <Ionicons name="person-remove-outline" size={16} color="#ef4444" />
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity onPress={() => handleDeleteTrip(trip)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="trash-outline" size={16} color={Colors.danger ?? '#e53935'} />
                     </TouchableOpacity>
@@ -1173,12 +1181,12 @@ export default function JobOverviewScreen({ route, navigation }) {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Cancel This Trip</Text>
+              <Text style={styles.modalTitle}>{isAdmin ? 'Remove Technician' : 'Cancel This Trip'}</Text>
               <TouchableOpacity onPress={() => setCancelTripId(null)}>
                 <Ionicons name="close" size={24} color={Colors.text} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSub}>Please tell us why you're cancelling. This will be logged and your admin will be notified.</Text>
+            <Text style={styles.modalSub}>{isAdmin ? 'Provide a reason for removing this technician. This will be logged and the tech will be notified.' : 'Please tell us why you\'re cancelling. This will be logged and your admin will be notified.'}</Text>
             <TextInput
               style={[styles.modalInput, { minHeight: 100, textAlignVertical: 'top', marginHorizontal: 20 }]}
               value={cancelReason}
