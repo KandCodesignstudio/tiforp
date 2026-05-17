@@ -328,27 +328,30 @@ export default function JobsScreen({ navigation }) {
       </ScrollView>
 
       {isAdmin && techNames.length > 2 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.techFilterScroll}
-          contentContainerStyle={styles.filterRow}
-        >
-          {techNames.map((name) => {
-            const active = techFilter === name;
-            return (
-              <TouchableOpacity
-                key={name}
-                style={[styles.filterChip, active && styles.filterChipActive, styles.techChip]}
-                onPress={() => setTechFilter(name)}
-              >
-                <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                  {name === 'all' ? 'All Techs' : name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <View style={styles.techFilterWrap}>
+          <Text style={styles.techFilterLabel}>Tech:</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+            style={{ flex: 1 }}
+          >
+            {techNames.map((name) => {
+              const active = techFilter === name;
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={[styles.filterChip, active && styles.filterChipActive]}
+                  onPress={() => setTechFilter(name)}
+                >
+                  <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                    {name === 'all' ? 'All' : name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
 
       {loading ? (
@@ -459,13 +462,22 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   emptyText: { textAlign: 'center', color: Colors.gray, marginTop: 40, fontSize: 15 },
-  techFilterScroll: {
-    backgroundColor: Colors.primary + 'CC',
-    maxHeight: 44,
+  techFilterWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.screenBg,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: Colors.lightGray,
+    paddingLeft: 12,
+    maxHeight: 44,
   },
-  techChip: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)' },
+  techFilterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textLight,
+    marginRight: 4,
+    letterSpacing: 0.5,
+  },
   filterScroll: {
     flexGrow: 0,
     flexShrink: 0,
