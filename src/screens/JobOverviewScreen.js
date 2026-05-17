@@ -423,23 +423,28 @@ export default function JobOverviewScreen({ route, navigation }) {
     if (trip.status === 'checked_out' && !isAdmin) {
       const { data: freshNotes } = await supabase
         .from('notes').select('id').eq('job_id', jobId).eq('trip_number', trip.tripNumber);
-      const tripAttachments = (job.attachments ?? []).filter(
+      const freshAttachments = (job.attachments ?? []).filter(
         (a) => (a.tripNumber ?? 1) === trip.tripNumber && a.type !== 'signature'
       );
-      const hasNotes = (freshNotes ?? []).length > 0;
-      const hasAttachments = tripAttachments.length > 0;
+      const freshSignature = (job.attachments ?? []).find(
+        (a) => a.tripNumber === trip.tripNumber && a.type === 'signature'
+      );
+      const okNotes = (freshNotes ?? []).length > 0;
+      const okAttachments = freshAttachments.length > 0;
+      const okSignature = !!freshSignature;
 
       // Sync the local notes state so the checklist updates immediately
       refreshNotes();
 
-      if (!hasNotes || !hasAttachments) {
+      if (!okNotes || !okAttachments || !okSignature) {
         const missing = [
-          !hasNotes && 'notes',
-          !hasAttachments && 'photos/files',
-        ].filter(Boolean).join(' and ');
+          !okNotes && 'trip notes',
+          !okAttachments && 'photos/files',
+          !okSignature && 'client signature',
+        ].filter(Boolean).join(', ');
         Alert.alert(
           'Not Ready Yet',
-          `Please add ${missing} for this trip before submitting for approval.`,
+          `Please add ${missing} before submitting for approval.`,
           [{ text: 'OK' }]
         );
         return;
