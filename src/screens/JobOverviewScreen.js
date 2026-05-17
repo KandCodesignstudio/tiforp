@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, Switch, ActivityIndicator,
   Modal, TextInput, KeyboardAvoidingView, Platform, RefreshControl,
@@ -21,6 +21,16 @@ import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 import { supabase } from '../config/supabase';
 import DateTimePickerField from '../components/DateTimePicker';
 import { submitReview } from '../hooks/useTechReviews';
+
+function StarDisplay({ rating, size = 16 }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Ionicons key={i} name={i <= Math.round(rating) ? 'star' : 'star-outline'} size={size} color={i <= Math.round(rating) ? '#F59E0B' : '#D1D5DB'} />
+      ))}
+    </View>
+  );
+}
 
 function MapWithPin({ address }) {
   const [coords, setCoords] = useState(null);
@@ -95,13 +105,25 @@ export default function JobOverviewScreen({ route, navigation }) {
   const { user, isAdmin, profile } = useAuth();
   const { jobs, updateTripStatus, updatePayments, addTrip, updateTrip, deleteTrip, updateAttachments, closeJob, refresh } = useJobs({ isAdmin, userId: user?.id, channelId: 'detail', userProfile: profile });
   const { notes, refresh: refreshNotes } = useNotes(jobId);
+  const [jobReview, setJobReview] = useState(null);
+
+  // Use refs so the focus callback always calls the latest version
+  const refreshRef = useRef(refresh);
+  const refreshNotesRef = useRef(refreshNotes);
+  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
+  useEffect(() => { refreshNotesRef.current = refreshNotes; }, [refreshNotes]);
 
   useFocusEffect(
     useCallback(() => {
-      refresh();
-      refreshNotes();
+      refreshRef.current();
+      refreshNotesRef.current();
     }, [jobId])
   );
+
+  useEffect(() => {
+    supabase.from('tech_reviews').select('*').eq('job_id', jobId).maybeSingle()
+      .then(({ data }) => { if (data) setJobReview(data); });
+  }, [jobId]);
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
   const [newTripScope, setNewTripScope] = useState('');
@@ -733,8 +755,18 @@ export default function JobOverviewScreen({ route, navigation }) {
 
       {status === 'closed' && (
         <View style={styles.closedBanner}>
-          <Ionicons name="checkmark-circle" size={18} color={Colors.completed} />
-          <Text style={styles.closedBannerText}>This job has been closed</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="checkmark-circle" size={18} color={Colors.completed} />
+            <Text style={styles.closedBannerText}>This job has been closed</Text>
+          </View>
+          {!isAdmin && jobReview && (
+            <View style={styles.reviewRow}>
+              <StarDisplay rating={jobReview.rating} size={15} />
+              {!!jobReview.comment && (
+                <Text style={styles.reviewCommentText} numberOfLines={2}>{jobReview.comment}</Text>
+              )}
+            </View>
+          )}
         </View>
       )}
 
@@ -1026,18 +1058,18 @@ const styles = StyleSheet.create({
   },
   closeJobBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },
   closedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
     backgroundColor: Colors.completed + '15',
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: Colors.completed,
     paddingVertical: 13,
+    paddingHorizontal: 16,
     marginBottom: 12,
+    alignItems: 'center',
   },
   closedBannerText: { fontSize: 14, fontWeight: '700', color: Colors.completed },
+  reviewRow: { marginTop: 10, gap: 4 },
+  reviewCommentText: { fontSize: 12, color: Colors.darkGray, fontStyle: 'italic', lineHeight: 17 },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: Colors.textLight, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 },
   statusRow: { flexDirection: 'row', marginBottom: 14 },
   statusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },

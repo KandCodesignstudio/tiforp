@@ -11,10 +11,11 @@ export const TRIP_STATUSES = {
 };
 
 export const JOB_STATUSES = {
-  in_progress:    { label: 'IN PROGRESS',    color: Colors.inProgress },
-  completed:      { label: 'COMPLETED',      color: Colors.completed },
-  needs_followup: { label: 'NEEDS FOLLOWUP', color: Colors.danger },
-  closed:         { label: 'CLOSED',         color: Colors.gray },
+  in_progress:      { label: 'IN PROGRESS',     color: Colors.inProgress },
+  pending_approval: { label: 'PENDING APPROVAL', color: '#F59E0B' },
+  completed:        { label: 'COMPLETED',        color: Colors.completed },
+  needs_followup:   { label: 'NEEDS FOLLOWUP',  color: Colors.danger },
+  closed:           { label: 'CLOSED',           color: Colors.gray },
 };
 
 export function getTripStatus(status) {
@@ -29,6 +30,7 @@ export function rollupJobStatus(trips = []) {
   if (trips.length === 0) return 'in_progress';
   if (trips.some((t) => t.status === 'for_return')) return 'needs_followup';
   if (trips.every((t) => t.status === 'completed')) return 'completed';
+  if (trips.some((t) => t.status === 'pending_approval')) return 'pending_approval';
   return 'in_progress';
 }
 
