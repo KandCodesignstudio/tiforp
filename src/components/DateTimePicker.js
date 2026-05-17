@@ -129,22 +129,24 @@ export default function DateTimePickerField({
       </TouchableOpacity>
 
       <Modal visible={show} transparent animationType="slide">
-        <Pressable style={styles.overlay} onPress={() => setShow(false)} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Select Date & Time</Text>
-            <TouchableOpacity onPress={() => setShow(false)} style={styles.doneBtn}>
-              <Text style={styles.doneBtnText}>Done</Text>
-            </TouchableOpacity>
+        <View style={styles.sheetOuter}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShow(false)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Select Date & Time</Text>
+              <TouchableOpacity onPress={() => setShow(false)} style={styles.doneBtn}>
+                <Text style={styles.doneBtnText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <RNDateTimePicker
+              value={currentValue ?? new Date()}
+              mode="datetime"
+              display="spinner"
+              onChange={handleChange}
+              minimumDate={minimumDate}
+              style={{ width: '100%', height: 216, backgroundColor: Colors.white }}
+            />
           </View>
-          <RNDateTimePicker
-            value={currentValue ?? new Date()}
-            mode="datetime"
-            display="spinner"
-            onChange={handleChange}
-            minimumDate={minimumDate}
-            style={{ width: '100%', height: 216, backgroundColor: Colors.white }}
-          />
         </View>
       </Modal>
     </View>
@@ -169,6 +171,11 @@ const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
 
   // iPhone bottom sheet
+  sheetOuter: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
   sheet: {
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
