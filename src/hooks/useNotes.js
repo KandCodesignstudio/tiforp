@@ -92,8 +92,13 @@ export function useNotes(jobId) {
   };
 
   const deleteNote = async (id) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id));
-    await supabase.from('notes').delete().eq('id', id);
+    const prev = notes;
+    setNotes((n) => n.filter((note) => note.id !== id));
+    const { error } = await supabase.from('notes').delete().eq('id', id);
+    if (error) {
+      setNotes(prev); // rollback
+      throw error;
+    }
   };
 
   return { notes, loading, addNote, updateNote, deleteNote, refresh: fetchNotes };

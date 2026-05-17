@@ -147,7 +147,7 @@ export default function NotesScreen({ route, navigation }) {
   const handleDelete = (note) => {
     Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteNote(note.id) },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteNote(note.id).catch(() => Alert.alert('Error', 'Could not delete note. You may not have permission.')) },
     ]);
   };
 
