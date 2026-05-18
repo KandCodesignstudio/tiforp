@@ -1,27 +1,21 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, FlatList, TextInput, TouchableOpacity, Alert,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Modal, RefreshControl, BackHandler,
+  View, Text, FlatList, TextInput, TouchableOpacity,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { TabActions } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { useJobs } from '../hooks/useJobs';
+import { useJobs } from '../context/JobsContext';
 import { useNotes } from '../hooks/useNotes';
-import { notifyAdmins } from '../utils/notifications';
 import { Colors } from '../utils/colors';
 
-function formatNoteTime(date) {
-  if (!date) return '';
+function timeAgo(date) {
   const d = date instanceof Date ? date : new Date(date);
   const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-  const relative = diff < 60 ? 'Just now'
-    : diff < 3600 ? `${Math.floor(diff / 60)}m ago`
-    : diff < 86400 ? `${Math.floor(diff / 3600)}h ago`
-    : null;
-  const absolute = d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-  return relative ? `${relative} · ${absolute}` : absolute;
+  if (diff < 60) return 'a few seconds ago';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function formatTripDate(date) {
@@ -30,131 +24,39 @@ function formatTripDate(date) {
   return `${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}-${d.getFullYear()}`;
 }
 
-function NoteCard({ note, isOwner, onEdit, onDelete }) {
+function NoteCard({ note }) {
   return (
     <View style={styles.noteCard}>
-      <View style={styles.noteHeader}>
-        <Text style={styles.noteAuthor}>{note.author}</Text>
-        {isOwner && (
-          <View style={styles.noteActions}>
-            <TouchableOpacity onPress={() => onEdit(note)} style={styles.actionBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="pencil-outline" size={15} color={Colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => onDelete(note)} style={styles.actionBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="trash-outline" size={15} color={Colors.danger ?? '#e53935'} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      <Text style={styles.noteAuthor}>{note.author}</Text>
       <Text style={styles.noteText}>{note.text}</Text>
-      <Text style={styles.noteTime}>{formatNoteTime(note.createdAt)}</Text>
+      <Text style={styles.noteTime}>{timeAgo(note.createdAt)}</Text>
     </View>
   );
 }
 
-export default function NotesScreen({ route, navigation }) {
-  const { jobId, initialTripNumber } = route.params;
-  const cameFromTrip = !!route.params?.initialTripNumber;
-  const { user, profile, isAdmin } = useAuth();
-  const { jobs, refresh: refreshJobs } = useJobs({ isAdmin, userId: user?.id, channelId: 'notes' });
-  const job = jobs.find((j) => j.id === jobId) ?? route.params.job;
-  const { notes, addNote, updateNote, deleteNote, refresh: refreshNotes } = useNotes(jobId);
+export default function NotesScreen({ route }) {
+  const { jobId } = route.params;
+  const { notes, addNote } = useNotes(jobId);
+  const { getJobById } = useJobs();
+  const { user } = useAuth();
+
+  const job = getJobById(jobId);
   const [text, setText] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState(job?.trips?.[0]?.tripNumber ?? 1);
   const listRef = useRef(null);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    Promise.all([Promise.resolve(refreshJobs()), Promise.resolve(refreshNotes())])
-      .finally(() => setRefreshing(false));
-  };
+  if (!job) return null;
 
-  const [editingNote, setEditingNote] = useState(null);
-  const [editText, setEditText] = useState('');
-
-  const trips = job?.trips ?? [];
-  const [selectedTrip, setSelectedTrip] = useState(
-    () => initialTripNumber
-      ?? trips.find((t) => t.status !== 'completed' && t.status !== 'for_return')?.tripNumber
-      ?? trips[0]?.tripNumber
-      ?? 1
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      const n = route.params?.initialTripNumber;
-      if (n) setSelectedTrip(n);
-
-      // Intercept Android hardware back — go to Overview tab, not Jobs list
-      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-        if (route.params?.initialTripNumber) {
-          navigation.dispatch(TabActions.jumpTo('Overview'));
-          return true;
-        }
-        return false;
-      });
-      return () => sub.remove();
-    }, [route.params?.initialTripNumber])
-  );
-  const ALL_TRIPS = 0;
-
-  const filteredNotes = selectedTrip === ALL_TRIPS
-    ? notes
-    : notes.filter((n) => n.tripNumber === selectedTrip);
-
-  const groupedByTrip = useMemo(() => {
-    if (selectedTrip !== ALL_TRIPS) return null;
-    const groups = {};
-    for (const note of notes) {
-      const tn = note.tripNumber ?? 1;
-      if (!groups[tn]) groups[tn] = [];
-      groups[tn].push(note);
-    }
-    return Object.entries(groups)
-      .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([tn, tripNotes]) => ({ tripNumber: Number(tn), notes: tripNotes }));
-  }, [notes, selectedTrip]);
+  const trips = job.trips ?? [];
+  const filteredNotes = notes.filter((n) => n.tripNumber === selectedTrip);
 
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const author = profile?.full_name?.trim() || user?.email || 'Tech';
+    const author = user?.email ?? 'Tech';
     setText('');
-    await addNote(jobId, trimmed, author, selectedTrip, user?.id);
+    await addNote(jobId, trimmed, author, selectedTrip);
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-
-    if (!isAdmin) {
-      const preview = trimmed.length > 80 ? `${trimmed.slice(0, 77)}...` : trimmed;
-      notifyAdmins(
-        'New Note',
-        `${author} on Trip ${selectedTrip} of job ${job?.jobNumber ?? jobId}: "${preview}"`,
-        { jobId }
-      ).catch(() => {});
-    }
-  };
-
-  const handleEdit = (note) => {
-    setEditingNote(note);
-    setEditText(note.text);
-  };
-
-  const handleEditSave = async () => {
-    if (!editText.trim()) return;
-    await updateNote(editingNote.id, editText);
-    setEditingNote(null);
-  };
-
-  const handleDelete = (note) => {
-    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteNote(note.id).catch(() => Alert.alert('Error', 'Could not delete note. You may not have permission.')) },
-    ]);
-  };
-
-  const isNoteOwner = (note) => {
-    if (note.userId) return note.userId === user?.id;
-    const myName = profile?.full_name?.trim() || user?.email || 'Tech';
-    return note.author === myName;
   };
 
   return (
@@ -164,30 +66,13 @@ export default function NotesScreen({ route, navigation }) {
       keyboardVerticalOffset={90}
     >
       <View style={styles.container}>
-        {cameFromTrip && (
-          <TouchableOpacity
-            style={styles.backBar}
-            onPress={() => navigation.dispatch(TabActions.jumpTo('Overview'))}
-          >
-            <Ionicons name="chevron-back" size={16} color={Colors.primary} />
-            <Text style={styles.backBarText}>Back to Overview</Text>
-          </TouchableOpacity>
-        )}
-        {trips.length > 0 && (
+        {trips.length > 1 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.tabs}
             contentContainerStyle={styles.tabsContent}
           >
-            {isAdmin && (
-              <TouchableOpacity
-                style={[styles.tab, selectedTrip === ALL_TRIPS && styles.tabActive]}
-                onPress={() => setSelectedTrip(ALL_TRIPS)}
-              >
-                <Text style={[styles.tabText, selectedTrip === ALL_TRIPS && styles.tabTextActive]}>ALL TRIPS</Text>
-              </TouchableOpacity>
-            )}
             {trips.map((t) => (
               <TouchableOpacity
                 key={t.id}
@@ -202,61 +87,17 @@ export default function NotesScreen({ route, navigation }) {
           </ScrollView>
         )}
 
-        {selectedTrip === ALL_TRIPS && groupedByTrip ? (
-          <ScrollView
-            ref={listRef}
-            contentContainerStyle={styles.notesList}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />}
-          >
-            {groupedByTrip.length === 0 ? (
-              <Text style={styles.emptyText}>No notes yet.</Text>
-            ) : groupedByTrip.map(({ tripNumber, notes: tripNotes }) => {
-              const tripObj = trips.find((t) => t.tripNumber === tripNumber);
-              const dateStr = tripObj?.scheduledAt ? formatTripDate(tripObj.scheduledAt) : '';
-              return (
-                <View key={tripNumber}>
-                  <View style={styles.tripGroupHeader}>
-                    <View style={styles.tripGroupDot} />
-                    <Text style={styles.tripGroupLabel}>
-                      TRIP {tripNumber}{dateStr ? `  ·  ${dateStr}` : ''}
-                    </Text>
-                  </View>
-                  {tripNotes.map((note) => (
-                    <NoteCard
-                      key={note.id}
-                      note={note}
-                      isOwner={isNoteOwner(note)}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </View>
-              );
-            })}
-          </ScrollView>
-        ) : (
-          <FlatList
-            ref={listRef}
-            data={filteredNotes}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.notesList}
-            renderItem={({ item }) => (
-              <NoteCard
-                note={item}
-                isOwner={isNoteOwner(item)}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            )}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
-            }
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>No notes for this trip yet.</Text>
-            }
-          />
-        )}
+        <FlatList
+          ref={listRef}
+          data={filteredNotes}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.notesList}
+          renderItem={({ item }) => <NoteCard note={item} />}
+          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No notes for this trip yet.</Text>
+          }
+        />
 
         <View style={styles.inputRow}>
           <TextInput
@@ -273,31 +114,6 @@ export default function NotesScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Edit modal */}
-      <Modal visible={!!editingNote} transparent animationType="fade" onRequestClose={() => setEditingNote(null)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.editModal}>
-            <Text style={styles.editTitle}>Edit Note</Text>
-            <TextInput
-              style={styles.editInput}
-              value={editText}
-              onChangeText={setEditText}
-              multiline
-              maxLength={1000}
-              autoFocus
-            />
-            <View style={styles.editActions}>
-              <TouchableOpacity style={styles.editCancelBtn} onPress={() => setEditingNote(null)}>
-                <Text style={styles.editCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.editSaveBtn} onPress={handleEditSave}>
-                <Text style={styles.editSaveText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -305,14 +121,6 @@ export default function NotesScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.screenBg },
-  backBar: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1, borderBottomColor: Colors.lightGray,
-    gap: 4,
-  },
-  backBarText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
   tabs: { backgroundColor: Colors.primary, maxHeight: 48 },
   tabsContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   tab: {
@@ -336,24 +144,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  noteHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  noteAuthor: { fontSize: 13, fontWeight: '700', color: Colors.primary, flex: 1 },
-  noteActions: { flexDirection: 'row', gap: 10 },
-  actionBtn: { padding: 2 },
+  noteAuthor: { fontSize: 13, fontWeight: '700', color: Colors.primary, marginBottom: 4 },
   noteText: { fontSize: 14, color: Colors.text, lineHeight: 20 },
   noteTime: { fontSize: 11, color: Colors.gray, marginTop: 6, textAlign: 'right' },
   emptyText: { textAlign: 'center', color: Colors.gray, marginTop: 40, fontSize: 14 },
-  tripGroupHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginTop: 20, marginBottom: 10,
-  },
-  tripGroupDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary,
-  },
-  tripGroupLabel: {
-    fontSize: 11, fontWeight: '800', color: Colors.primary,
-    letterSpacing: 1.2, textTransform: 'uppercase',
-  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -378,34 +172,4 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
   },
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', paddingHorizontal: 24,
-  },
-  editModal: {
-    backgroundColor: Colors.white, borderRadius: 16,
-    padding: 20,
-  },
-  editTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 12 },
-  editInput: {
-    backgroundColor: Colors.offWhite ?? '#f5f5f5',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    color: Colors.text,
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: 16,
-  },
-  editActions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
-  editCancelBtn: {
-    paddingHorizontal: 20, paddingVertical: 10,
-    borderRadius: 8, borderWidth: 1, borderColor: Colors.lightGray ?? '#e0e0e0',
-  },
-  editCancelText: { fontSize: 14, color: Colors.gray },
-  editSaveBtn: {
-    paddingHorizontal: 20, paddingVertical: 10,
-    borderRadius: 8, backgroundColor: Colors.primary,
-  },
-  editSaveText: { fontSize: 14, fontWeight: '700', color: Colors.white },
 });

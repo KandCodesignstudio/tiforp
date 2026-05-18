@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.105.4",
     "babel-preset-expo": "~12.0.9",
     "expo": "~54.0.33",
+    "expo-dev-client": "~6.0.21",
     "expo-device": "~7.1.4",
     "expo-document-picker": "^55.0.13",
     "expo-file-system": "^55.0.19",
