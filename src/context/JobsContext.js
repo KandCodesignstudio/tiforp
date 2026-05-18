@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../config/supabase';
 import { MOCK_JOBS } from '../config/mockData';
 
@@ -48,6 +48,19 @@ export function JobsProvider({ children }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchJobs = useCallback(async () => {
+    if (USE_MOCK) return;
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error) setJobs((data ?? []).map(transformJob));
+  }, []);
+
+  const refreshJobs = useCallback(async () => {
+    await fetchJobs();
+  }, [fetchJobs]);
+
   useEffect(() => {
     if (USE_MOCK) {
       setJobs(initMockJobs());
@@ -55,28 +68,15 @@ export function JobsProvider({ children }) {
       return;
     }
 
-    supabase
-      .from('jobs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!error) setJobs((data ?? []).map(transformJob));
-        setLoading(false);
-      });
+    fetchJobs().then(() => setLoading(false));
 
     const channel = supabase
       .channel('jobs-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
-        supabase
-          .from('jobs')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .then(({ data }) => setJobs((data ?? []).map(transformJob)));
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, fetchJobs)
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, []);
+  }, [fetchJobs]);
 
   const getJobById = (jobId) => jobs.find((j) => j.id === jobId);
 
@@ -142,7 +142,7 @@ export function JobsProvider({ children }) {
 
   return (
     <JobsContext.Provider
-      value={{ jobs, loading, getJobById, checkIn, checkOut, markTripComplete, updateJobStatus }}
+      value={{ jobs, loading, getJobById, checkIn, checkOut, markTripComplete, updateJobStatus, refreshJobs }}
     >
       {children}
     </JobsContext.Provider>

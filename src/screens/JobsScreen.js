@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useJobs } from '../hooks/useJobs';
 import { Colors } from '../utils/colors';
 
@@ -49,15 +50,22 @@ function JobCard({ job, onPress }) {
 }
 
 export default function JobsScreen({ navigation }) {
-  const { jobs, loading } = useJobs();
+  const { jobs, loading, refreshJobs } = useJobs();
   const [refreshing, setRefreshing] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshJobs?.();
+    }, [refreshJobs])
+  );
 
   const inProgress = jobs.filter((j) => j.status === 'in_progress');
   const completed = jobs.filter((j) => j.status === 'completed');
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    await refreshJobs?.();
+    setRefreshing(false);
   };
 
   const sections = [
