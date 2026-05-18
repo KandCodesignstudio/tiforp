@@ -165,6 +165,7 @@ export default function JobOverviewScreen({ route, navigation }) {
     next.has(tripId) ? next.delete(tripId) : next.add(tripId);
     return next;
   });
+  const [descExpanded, setDescExpanded] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
@@ -548,9 +549,25 @@ export default function JobOverviewScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.description}>{description}</Text>
-      </View>
+      {!!description && (
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => setDescExpanded((v) => !v)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.descHeader}>
+            <Text style={styles.descLabel}>JOB DESCRIPTION</Text>
+            <Ionicons
+              name={descExpanded ? 'chevron-up' : 'chevron-down'}
+              size={15}
+              color={Colors.textLight}
+            />
+          </View>
+          {descExpanded && (
+            <Text style={[styles.description, { marginTop: 8 }]}>{description}</Text>
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* Custom fields */}
       {(job.metadata?.customFields ?? []).length > 0 && (
@@ -1464,6 +1481,8 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 14, color: Colors.text, flex: 1, lineHeight: 20 },
   infoLink: { color: Colors.accent },
   description: { fontSize: 14, color: Colors.darkGray, lineHeight: 21 },
+  descHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  descLabel: { fontSize: 11, fontWeight: '700', color: Colors.textLight, letterSpacing: 1 },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',

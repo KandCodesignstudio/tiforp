@@ -8,6 +8,7 @@ import { Colors } from '../utils/colors';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
+  const [logoFailed, setLogoFailed] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,11 +35,19 @@ export default function LoginScreen({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          {!logoFailed ? (
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              onError={() => setLogoFailed(true)}
+            />
+          ) : (
+            <View style={{ alignItems: 'center' }}>
+              <Text style={styles.brandSmall}>ITforP</Text>
+              <Text style={styles.brandLarge}>CORE</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.form}>
@@ -106,6 +115,8 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   header: { alignItems: 'center', marginBottom: 40 },
+  brandSmall: { fontSize: 18, fontWeight: '700', color: Colors.accentLight, letterSpacing: 5, marginBottom: -2 },
+  brandLarge: { fontSize: 60, fontWeight: '900', color: Colors.white, letterSpacing: -1 },
   logo: {
     width: 220,
     height: 120,
