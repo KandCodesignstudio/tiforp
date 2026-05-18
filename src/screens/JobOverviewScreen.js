@@ -22,7 +22,7 @@ import { supabase } from '../config/supabase';
 import { notifyAdmins, notifyUser } from '../utils/notifications';
 import DateTimePickerField from '../components/DateTimePicker';
 import { submitReview } from '../hooks/useTechReviews';
-import { useJobEvents } from '../hooks/useJobEvents';
+import { useJobEvents, logJobEvent } from '../hooks/useJobEvents';
 import { useProfiles } from '../hooks/useProfiles';
 
 function formatDuration(fromDate, toDate) {
@@ -347,6 +347,8 @@ export default function JobOverviewScreen({ route, navigation }) {
               }),
             }));
             await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
+            const adminName = profile?.full_name ?? user?.email ?? 'Admin';
+            logJobEvent(jobId, 'rescheduled', `Trip ${trip.tripLabel ?? trip.tripNumber} — Admin rescheduled to today`, adminName).catch(() => {});
             const techId = trip.technicianId ?? job.technicianId;
             if (techId) {
               notifyUser(
@@ -528,6 +530,7 @@ export default function JobOverviewScreen({ route, navigation }) {
                     }),
                   }));
                   await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
+                  logJobEvent(jobId, 'reschedule_requested', `Trip ${trip.tripLabel ?? trip.tripNumber} — ${requester} is on site and requested reschedule to today (was ${dateStr})`, requester).catch(() => {});
                   notifyAdmins(
                     'Reschedule Request',
                     `${requester} is on site for job ${job.jobNumber ?? jobId} (Trip ${trip.tripLabel ?? trip.tripNumber}) scheduled for ${dateStr}. Please update the trip date to today.`,
