@@ -159,6 +159,12 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [newTripTech, setNewTripTech] = useState(null);
   const [newTripTechSearch, setNewTripTechSearch] = useState('');
   const [savingTrip, setSavingTrip] = useState(false);
+  const [expandedScopes, setExpandedScopes] = useState(new Set());
+  const toggleScope = (tripId) => setExpandedScopes((prev) => {
+    const next = new Set(prev);
+    next.has(tripId) ? next.delete(tripId) : next.add(tripId);
+    return next;
+  });
   const [exportingPdf, setExportingPdf] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editingTrip, setEditingTrip] = useState(null);
@@ -1028,7 +1034,23 @@ export default function JobOverviewScreen({ route, navigation }) {
                 ) : null}
                 <Text style={styles.tripDate}>{formatTripDate(trip.scheduledAt)}</Text>
                 {!!trip.scopeOfWork && (
-                  <Text style={styles.tripScope} numberOfLines={2}>{trip.scopeOfWork}</Text>
+                  <TouchableOpacity
+                    onPress={() => toggleScope(trip.id)}
+                    activeOpacity={0.7}
+                    style={styles.scopeToggle}
+                  >
+                    <Text style={styles.scopeToggleLabel}>
+                      SCOPE OF WORK
+                    </Text>
+                    <Ionicons
+                      name={expandedScopes.has(trip.id) ? 'chevron-up' : 'chevron-down'}
+                      size={13}
+                      color={Colors.textLight}
+                    />
+                  </TouchableOpacity>
+                )}
+                {!!trip.scopeOfWork && expandedScopes.has(trip.id) && (
+                  <Text style={styles.tripScope}>{trip.scopeOfWork}</Text>
                 )}
                 {!!trip.checkedInAt && (
                   <Text style={styles.tripTimeText}>In: {formatTime(trip.checkedInAt)}{trip.checkedOutAt ? `  Out: ${formatTime(trip.checkedOutAt)}` : ''}</Text>
@@ -1564,7 +1586,9 @@ const styles = StyleSheet.create({
   tripLeft: { flex: 1, paddingRight: 12 },
   tripLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
   tripDate: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
-  tripScope: { fontSize: 12, color: Colors.darkGray, marginTop: 4, lineHeight: 16 },
+  tripScope: { fontSize: 12, color: Colors.darkGray, marginTop: 4, lineHeight: 18 },
+  scopeToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  scopeToggleLabel: { fontSize: 10, fontWeight: '700', color: Colors.textLight, letterSpacing: 0.5 },
   tripTimeText: { fontSize: 11, color: Colors.textLight, marginTop: 4 },
   tripDurationText: { fontSize: 11, color: Colors.accent, fontWeight: '600', marginTop: 2 },
   tripTimeBanner: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, padding: 8, backgroundColor: Colors.screenBg, borderRadius: 8 },
