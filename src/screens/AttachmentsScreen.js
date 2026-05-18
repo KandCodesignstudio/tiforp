@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, TabActions } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Colors } from '../utils/colors';
 import { supabase } from '../config/supabase';
@@ -16,6 +17,30 @@ import { useJobs } from '../hooks/useJobs';
 
 const BUCKET = 'attachments';
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'heic', 'gif', 'webp']);
+const MAX_DIMENSION = 1920;
+const COMPRESS_QUALITY = 0.75;
+
+async function compressImage(uri) {
+  const resize = [];
+  try {
+    const info = await ImageManipulator.manipulateAsync(uri, [], { base64: false });
+    const { width, height } = info;
+    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+      if (width >= height) {
+        resize.push({ resize: { width: MAX_DIMENSION } });
+      } else {
+        resize.push({ resize: { height: MAX_DIMENSION } });
+      }
+    }
+  } catch {
+    // if we can't read dimensions, still run compression
+  }
+  const result = await ImageManipulator.manipulateAsync(uri, resize, {
+    compress: COMPRESS_QUALITY,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+  return result.uri;
+}
 
 function getExt(name = '') {
   return name.split('.').pop()?.toLowerCase() ?? '';
@@ -213,12 +238,13 @@ export default function AttachmentsScreen({ route, navigation }) {
         Alert.alert('Permission Needed', 'Allow photo library access to attach photos.');
         return;
       }
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
       if (!result.canceled && result.assets?.[0]) {
         setUploading(true);
         const asset = result.assets[0];
-        const name = asset.uri.split('/').pop() ?? `photo_${Date.now()}.jpg`;
-        await addAttachment({ name, size: asset.fileSize, uri: asset.uri, mimeType: asset.mimeType ?? 'image/jpeg' });
+        const compressedUri = await compressImage(asset.uri);
+        const name = `photo_${Date.now()}.jpg`;
+        await addAttachment({ name, uri: compressedUri, mimeType: 'image/jpeg' });
       }
     } catch (err) {
       Alert.alert('Upload Error', err.message ?? 'Could not upload photo.');
@@ -234,12 +260,13 @@ export default function AttachmentsScreen({ route, navigation }) {
         Alert.alert('Permission Needed', 'Allow camera access to take photos.');
         return;
       }
-      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
       if (!result.canceled && result.assets?.[0]) {
         setUploading(true);
         const asset = result.assets[0];
+        const compressedUri = await compressImage(asset.uri);
         const name = `photo_${Date.now()}.jpg`;
-        await addAttachment({ name, size: asset.fileSize, uri: asset.uri, mimeType: 'image/jpeg' });
+        await addAttachment({ name, uri: compressedUri, mimeType: 'image/jpeg' });
       }
     } catch (err) {
       Alert.alert('Upload Error', err.message ?? 'Could not take photo.');
