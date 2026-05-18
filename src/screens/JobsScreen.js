@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, Alert,
   ActivityIndicator, RefreshControl, StatusBar, ScrollView, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { useNotificationInbox } from '../hooks/useNotificationInbox';
@@ -124,6 +125,12 @@ export default function JobsScreen({ navigation }) {
       setReviewMap(map);
     });
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh?.();
+    }, [refresh])
+  );
 
   const visibleFilters = FILTERS.filter((f) => !f.adminOnly || isAdmin);
 
