@@ -19,7 +19,7 @@ import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 import { TabActions, useFocusEffect } from '@react-navigation/native';
 import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 import { supabase } from '../config/supabase';
-import { notifyAdmins } from '../utils/notifications';
+import { notifyAdmins, notifyUser } from '../utils/notifications';
 import DateTimePickerField from '../components/DateTimePicker';
 import { submitReview } from '../hooks/useTechReviews';
 import { useJobEvents } from '../hooks/useJobEvents';
@@ -325,6 +325,43 @@ export default function JobOverviewScreen({ route, navigation }) {
 
   const doCheckIn = (trip) => updateTripStatus(job.id, trip.id, 'checked_in');
 
+  const handleRescheduleToToday = (trip) => {
+    const today = new Date();
+    today.setHours(9, 0, 0, 0);
+    Alert.alert(
+      'Reschedule to Today',
+      `Reschedule Trip ${trip.tripLabel ?? trip.tripNumber} to today (${today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}) and notify the technician?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reschedule',
+          onPress: async () => {
+            const updatedTrips = job.trips.map((t) => ({
+              ...t,
+              scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
+              checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
+              checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+              ...(t.id === trip.id && {
+                scheduledAt: today.toISOString(),
+                rescheduleRequest: null,
+              }),
+            }));
+            await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
+            const techId = trip.technicianId ?? job.technicianId;
+            if (techId) {
+              notifyUser(
+                techId,
+                'Trip Rescheduled — You\'re Good to Go',
+                `Admin rescheduled Trip ${trip.tripLabel ?? trip.tripNumber} on job ${job.jobNumber ?? jobId} to today. You can now proceed.`,
+                { jobId }
+              ).catch(() => {});
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleCheckInWithGPS = async (trip) => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -479,10 +516,21 @@ export default function JobOverviewScreen({ route, navigation }) {
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'Send Request',
-                onPress: () => {
+                onPress: async () => {
+                  const requester = profile?.full_name ?? user?.email ?? 'Tech';
+                  const updatedTrips = job.trips.map((t) => ({
+                    ...t,
+                    scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
+                    checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
+                    checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+                    ...(t.id === trip.id && {
+                      rescheduleRequest: { requestedBy: requester, requestedAt: new Date().toISOString() },
+                    }),
+                  }));
+                  await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
                   notifyAdmins(
                     'Reschedule Request',
-                    `${profile?.full_name ?? user?.email ?? 'Tech'} is on site for job ${job.jobNumber ?? jobId} (Trip ${trip.tripLabel ?? trip.tripNumber}) scheduled for ${dateStr}. Please update the trip date to today.`,
+                    `${requester} is on site for job ${job.jobNumber ?? jobId} (Trip ${trip.tripLabel ?? trip.tripNumber}) scheduled for ${dateStr}. Please update the trip date to today.`,
                     { jobId },
                     user?.id
                   ).catch(() => {});
@@ -1069,6 +1117,22 @@ export default function JobOverviewScreen({ route, navigation }) {
                 {!!trip.scopeOfWork && expandedScopes.has(trip.id) && (
                   <Text style={styles.tripScope}>{trip.scopeOfWork}</Text>
                 )}
+                {isAdmin && !!trip.rescheduleRequest && (
+                  <View style={styles.rescheduleRequestBanner}>
+                    <View style={styles.rescheduleRequestInfo}>
+                      <Ionicons name="calendar-outline" size={13} color={Colors.warning} />
+                      <Text style={styles.rescheduleRequestText}>
+                        {trip.rescheduleRequest.requestedBy} is on site — requesting reschedule to today
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.rescheduleBtn}
+                      onPress={() => handleRescheduleToToday(trip)}
+                    >
+                      <Text style={styles.rescheduleBtnText}>Reschedule to Today</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
                 {!!trip.checkedInAt && (
                   <Text style={styles.tripTimeText}>In: {formatTime(trip.checkedInAt)}{trip.checkedOutAt ? `  Out: ${formatTime(trip.checkedOutAt)}` : ''}</Text>
                 )}
@@ -1606,6 +1670,25 @@ const styles = StyleSheet.create({
   tripLabel: { fontSize: 14, fontWeight: '600', color: Colors.text },
   tripDate: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
   tripScope: { fontSize: 12, color: Colors.darkGray, marginTop: 4, lineHeight: 18 },
+  rescheduleRequestBanner: {
+    marginTop: 8,
+    backgroundColor: Colors.warning + '15',
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.warning,
+    borderRadius: 6,
+    padding: 8,
+    gap: 6,
+  },
+  rescheduleRequestInfo: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  rescheduleRequestText: { fontSize: 12, color: Colors.warning, flex: 1, lineHeight: 16, fontWeight: '500' },
+  rescheduleBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.warning,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  rescheduleBtnText: { fontSize: 12, fontWeight: '700', color: Colors.white },
   scopeToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   scopeToggleLabel: { fontSize: 10, fontWeight: '700', color: Colors.textLight, letterSpacing: 0.5 },
   tripTimeText: { fontSize: 11, color: Colors.textLight, marginTop: 4 },
