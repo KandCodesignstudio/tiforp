@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { useJobs } from '../context/JobsContext';
 import { Colors } from '../utils/colors';
 
 function formatDateTime(date) {
@@ -18,11 +19,28 @@ function formatTripDate(date) {
 }
 
 export default function InstructionsScreen({ route }) {
-  const { job } = route.params;
-  const trips = job.trips ?? [];
+  const { jobId } = route.params;
+  const { getJobById } = useJobs();
+  const job = getJobById(jobId);
+
+  const trips = job?.trips ?? [];
   const [selectedTrip, setSelectedTrip] = useState(trips[0]?.id ?? null);
 
+  if (!job) return null;
+
   const trip = trips.find((t) => t.id === selectedTrip) ?? trips[0];
+
+  const tripStatusLabel = (t) => {
+    if (t.status === 'completed') return 'DONE';
+    if (t.checkedInAt) return 'ACTIVE';
+    return 'SCHED';
+  };
+
+  const tripStatusColor = (t) => {
+    if (t.status === 'completed') return Colors.completed;
+    if (t.checkedInAt) return Colors.inProgress;
+    return Colors.warning;
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -45,6 +63,17 @@ export default function InstructionsScreen({ route }) {
               <Text style={[styles.tabText, t.id === selectedTrip && styles.tabTextActive]}>
                 Trip {t.tripNumber}
               </Text>
+              <View style={[
+                styles.tabBadge,
+                { backgroundColor: tripStatusColor(t) + (t.id === selectedTrip ? 'FF' : '33') },
+              ]}>
+                <Text style={[
+                  styles.tabBadgeText,
+                  { color: t.id === selectedTrip ? Colors.white : tripStatusColor(t) },
+                ]}>
+                  {tripStatusLabel(t)}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -94,7 +123,10 @@ const styles = StyleSheet.create({
   tripChipText: { color: Colors.white, fontSize: 12, fontWeight: '600' },
   tripTabs: { marginBottom: 12 },
   tab: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: Colors.lightGray,
@@ -103,6 +135,12 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: Colors.primary },
   tabText: { fontSize: 13, color: Colors.darkGray, fontWeight: '600' },
   tabTextActive: { color: Colors.white },
+  tabBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  tabBadgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 0.3 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 12,

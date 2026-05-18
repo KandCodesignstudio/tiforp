@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import JobOverviewScreen from '../screens/JobOverviewScreen';
 import InstructionsScreen from '../screens/InstructionsScreen';
 import AttachmentsScreen from '../screens/AttachmentsScreen';
@@ -20,16 +20,8 @@ function TabIcon({ name, focused }) {
   );
 }
 
-function TabLabel({ label, focused }) {
-  return (
-    <Text style={[styles.label, focused && styles.labelActive]}>
-      {label}
-    </Text>
-  );
-}
-
 export default function JobDetailNavigator({ route }) {
-  const { job } = route.params;
+  const { jobId } = route.params;
 
   return (
     <Tab.Navigator
@@ -45,7 +37,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Overview"
         component={JobOverviewScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId }}
         options={{
           tabBarLabel: 'OVERVIEW',
           tabBarIcon: ({ focused }) => <TabIcon name="information-circle-outline" focused={focused} />,
@@ -54,7 +46,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Instructions"
         component={InstructionsScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId }}
         options={{
           tabBarLabel: 'INSTRUCTIONS',
           tabBarIcon: ({ focused }) => <TabIcon name="document-text-outline" focused={focused} />,
@@ -63,7 +55,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Attachments"
         component={AttachmentsScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId }}
         options={{
           tabBarLabel: 'ATTACHMENTS',
           tabBarIcon: ({ focused }) => <TabIcon name="attach-outline" focused={focused} />,
@@ -72,7 +64,7 @@ export default function JobDetailNavigator({ route }) {
       <Tab.Screen
         name="Notes"
         component={NotesScreen}
-        initialParams={{ job }}
+        initialParams={{ jobId }}
         options={{
           tabBarLabel: 'NOTES',
           tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-outline" focused={focused} />,
@@ -95,8 +87,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
     color: Colors.gray,
-  },
-  labelActive: {
-    color: Colors.accent,
   },
 });
