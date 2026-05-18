@@ -19,6 +19,7 @@ import { getTripStatus, getJobStatus, TRIP_STATUSES } from '../utils/status';
 import { TabActions, useFocusEffect } from '@react-navigation/native';
 import { generateWorkOrderHTML } from '../utils/generateWorkOrder';
 import { supabase } from '../config/supabase';
+import { notifyAdmins } from '../utils/notifications';
 import DateTimePickerField from '../components/DateTimePicker';
 import { submitReview } from '../hooks/useTechReviews';
 import { useJobEvents } from '../hooks/useJobEvents';
@@ -452,6 +453,40 @@ export default function JobOverviewScreen({ route, navigation }) {
 
       updateTripStatus(job.id, trip.id, 'pending_approval');
       return;
+    }
+
+    // Block tech from going en_route on a future-dated trip
+    if (info.next === 'en_route' && !isAdmin) {
+      const scheduled = trip.scheduledAt instanceof Date ? trip.scheduledAt : trip.scheduledAt ? new Date(trip.scheduledAt) : null;
+      if (scheduled) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tripDay = new Date(scheduled);
+        tripDay.setHours(0, 0, 0, 0);
+        if (tripDay > today) {
+          const dateStr = scheduled.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          Alert.alert(
+            'Trip Not Yet Scheduled for Today',
+            `This trip is scheduled for ${dateStr}. An admin needs to approve and reschedule it to today before you can proceed.\n\nSend a reschedule request to admin?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Send Request',
+                onPress: () => {
+                  notifyAdmins(
+                    'Reschedule Request',
+                    `${profile?.full_name ?? user?.email ?? 'Tech'} is on site for job ${job.jobNumber ?? jobId} (Trip ${trip.tripLabel ?? trip.tripNumber}) scheduled for ${dateStr}. Please update the trip date to today.`,
+                    { jobId },
+                    user?.id
+                  ).catch(() => {});
+                  Alert.alert('Request Sent', 'Admin has been notified to reschedule the trip.');
+                },
+              },
+            ]
+          );
+          return;
+        }
+      }
     }
 
     // GPS verification for check-in
