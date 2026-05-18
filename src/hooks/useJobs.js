@@ -103,7 +103,7 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       const body = newStatus === 'pending_approval'
         ? `${techName} submitted Trip for approval on job ${jobNum}. Please review notes and photos.`
         : `${techName} marked Trip as "${statusLabel}" on job ${jobNum}`;
-      notifyAdmins(title, body, { jobId }).catch(() => {});
+      notifyAdmins(title, body, { jobId }, userId).catch(() => {});
     }
 
     if (isAdmin && newStatus === 'completed') {
@@ -350,7 +350,8 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
       notifyAdmins(
         'Tech Cancelled — Action Required',
         `${techName} cancelled Trip ${tripLabel} on job ${job.jobNumber ?? jobId}. Reason: ${reason}`,
-        { jobId }
+        { jobId },
+        userId
       ).catch(() => {});
     }
 

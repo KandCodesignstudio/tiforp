@@ -7,7 +7,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useJobChat } from '../hooks/useJobChat';
-import { notifyAdmins, notifyUser } from '../utils/notifications';
 import { Colors } from '../utils/colors';
 
 function formatTime(ts) {
@@ -50,18 +49,6 @@ export default function ChatScreen({ route }) {
     setSending(true);
     try {
       await sendMessage(msg, user?.id, senderName);
-      const jobNumber = job?.jobNumber ?? jobId;
-      const notifTitle = `New message — Job #${jobNumber}`;
-      const notifBody = msg.length > 80 ? msg.slice(0, 80) + '…' : msg;
-      const notifData = { jobId, screen: 'Chat' };
-      if (isAdmin) {
-        // Admin sent → notify the assigned technician
-        const techId = job?.technicianId;
-        if (techId) notifyUser(techId, notifTitle, notifBody, notifData);
-      } else {
-        // Tech sent → notify all admins
-        notifyAdmins(notifTitle, `${senderName}: ${notifBody}`, notifData);
-      }
     } catch (e) {
       setText(msg);
     } finally {

@@ -128,7 +128,8 @@ export default function NotesScreen({ route, navigation }) {
       notifyAdmins(
         'New Note',
         `${author} on Trip ${selectedTrip} of job ${job?.jobNumber ?? jobId}: "${preview}"`,
-        { jobId }
+        { jobId },
+        user?.id
       ).catch(() => {});
     }
   };

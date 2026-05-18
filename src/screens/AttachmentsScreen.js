@@ -227,6 +227,27 @@ export default function AttachmentsScreen({ route, navigation }) {
     }
   };
 
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Allow camera access to take photos.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (!result.canceled && result.assets?.[0]) {
+        setUploading(true);
+        const asset = result.assets[0];
+        const name = `photo_${Date.now()}.jpg`;
+        await addAttachment({ name, size: asset.fileSize, uri: asset.uri, mimeType: 'image/jpeg' });
+      }
+    } catch (err) {
+      Alert.alert('Upload Error', err.message ?? 'Could not take photo.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const openAttachment = (item) => {
     if (isImage(item.name) && item.url) setViewer(item);
     else if (item.url) Linking.openURL(item.url);
@@ -312,8 +333,9 @@ export default function AttachmentsScreen({ route, navigation }) {
       )}
 
       <TouchableOpacity style={styles.fab} onPress={() => Alert.alert('Add Attachment', `Upload to Trip ${selectedTrip}`, [
-        { text: 'Document / File', onPress: pickDocument },
+        { text: 'Take Photo', onPress: takePhoto },
         { text: 'Photo Library', onPress: pickPhoto },
+        { text: 'Document / File', onPress: pickDocument },
         { text: 'Cancel', style: 'cancel' },
       ])}>
         <Ionicons name="add" size={28} color={Colors.white} />

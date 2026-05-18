@@ -257,8 +257,8 @@ export default function JobsScreen({ navigation }) {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-            <Ionicons name="log-out-outline" size={24} color={Colors.white} />
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.logoutBtn}>
+            <Ionicons name="person-circle-outline" size={26} color={Colors.white} />
           </TouchableOpacity>
         </View>
       </View>

@@ -16,12 +16,13 @@ async function sendToProfiles(profiles, title, body, data) {
   });
 }
 
-export async function notifyAdmins(title, body, data = {}) {
+export async function notifyAdmins(title, body, data = {}, excludeUserId = null) {
   const { data: admins } = await supabase
     .from('profiles')
     .select('id, push_token')
     .eq('role', 'admin');
-  await sendToProfiles(admins, title, body, data);
+  const filtered = excludeUserId ? (admins ?? []).filter((a) => a.id !== excludeUserId) : admins;
+  await sendToProfiles(filtered, title, body, data);
 }
 
 export async function notifyUser(userId, title, body, data = {}) {

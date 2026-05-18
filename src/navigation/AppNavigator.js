@@ -19,6 +19,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import EditJobScreen from '../screens/EditJobScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import TechProfileScreen from '../screens/TechProfileScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import ReportBugScreen from '../screens/ReportBugScreen';
 import BugReportsScreen from '../screens/BugReportsScreen';
 import { Colors } from '../utils/colors';
@@ -100,6 +101,11 @@ function MainStack() {
         name="TechProfile"
         component={TechProfileScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'PROFILE' }}
       />
       <Stack.Screen
         name="ReportBug"
