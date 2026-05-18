@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ITforP Core — Feature Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.65;
+    color: #1a1a2e;
+    background: #fff;
+  }
+
+  /* ── Cover Page ── */
+  .cover {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    color: #fff;
+    text-align: center;
+    padding: 60px 40px;
+  }
+  .cover-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 9pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    color: #a8c8ff;
+  }
+  .cover h1 {
+    font-size: 42pt;
+    font-weight: 900;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .cover h1 span { color: #4fc3f7; }
+  .cover-sub {
+    font-size: 14pt;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 1px;
+    margin-bottom: 48px;
+  }
+  .cover-divider {
+    width: 60px;
+    height: 3px;
+    background: #4fc3f7;
+    border-radius: 2px;
+    margin: 0 auto 48px;
+  }
+  .cover-desc {
+    max-width: 520px;
+    font-size: 11pt;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    margin-bottom: 60px;
+  }
+  .cover-meta {
+    font-size: 9pt;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1px;
+  }
+  .cover-meta strong { color: rgba(255,255,255,0.6); }
+
+  /* ── TOC Page ── */
+  .toc-page {
+    page-break-after: always;
+    padding: 60px 72px;
+    min-height: 100vh;
+  }
+  .toc-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #4fc3f7;
+    margin-bottom: 4px;
+  }
+  .toc-heading {
+    font-size: 28pt;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin-bottom: 36px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e8f4ff;
+  }
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    padding: 9px 0;
+    border-bottom: 1px dotted #dde8f5;
+  }
+  .toc-num {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #4fc3f7;
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .toc-label {
+    font-size: 11pt;
+    font-weight: 500;
+    color: #1a1a2e;
+    flex: 1;
+  }
+  .toc-sub {
+    padding: 5px 0 5px 28px;
+    border-bottom: 1px dotted #eef4fb;
+  }
+  .toc-sub .toc-label { font-size: 10pt; color: #4a5568; font-weight: 400; }
+
+  /* ── Main content ── */
+  .content { padding: 0 72px 72px; }
+
+  /* Section headers */
+  .section-break { page-break-before: always; padding-top: 60px; }
+  .section-eyebrow {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #4fc3f7;
+    margin-bottom: 4px;
+  }
+  h2 {
+    font-size: 24pt;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+    line-height: 1.15;
+  }
+  .section-rule {
+    height: 3px;
+    background: linear-gradient(90deg, #4fc3f7, transparent);
+    border: none;
+    margin-bottom: 28px;
+    border-radius: 2px;
+  }
+  h3 {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 24px 0 8px;
+  }
+  h4 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 16px 0 6px;
+  }
+  p { margin-bottom: 12px; color: #2d3748; }
+
+  ul, ol { padding-left: 20px; margin-bottom: 14px; }
+  li { margin-bottom: 5px; color: #2d3748; }
+  li strong { color: #1a1a2e; }
+
+  /* Screenshot placeholder */
+  .screenshot-box {
+    background: #f0f7ff;
+    border: 2px dashed #b3d4f5;
+    border-radius: 10px;
+    padding: 32px 20px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .screenshot-box .ss-icon {
+    font-size: 28pt;
+    margin-bottom: 10px;
+    opacity: 0.4;
+  }
+  .screenshot-box .ss-label {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #2c6fa8;
+    margin-bottom: 4px;
+  }
+  .screenshot-box .ss-caption {
+    font-size: 9pt;
+    color: #7a9bbf;
+    font-style: italic;
+  }
+
+  /* Two-column screenshot layout */
+  .ss-row {
+    display: flex;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .ss-row .screenshot-box { flex: 1; }
+
+  /* Info box */
+  .info-box {
+    background: #f0f9ff;
+    border-left: 4px solid #4fc3f7;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+  }
+  .info-box p { margin: 0; color: #1a5276; }
+
+  /* Feature pill list */
+  .feature-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+  }
+  .feature-pill {
+    background: #e8f4ff;
+    color: #1a5276;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 9.5pt;
+    font-weight: 500;
+  }
+
+  /* Status table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 20px;
+    font-size: 10pt;
+  }
+  thead tr { background: #1a1a2e; color: #fff; }
+  thead th { padding: 10px 12px; text-align: left; font-weight: 600; font-size: 9.5pt; letter-spacing: 0.3px; }
+  tbody tr:nth-child(even) { background: #f7faff; }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid #e8f0fb; color: #2d3748; }
+  tbody td:first-child { font-weight: 500; color: #1a1a2e; }
+
+  /* Workflow diagram */
+  .workflow {
+    background: #f8faff;
+    border: 1px solid #dde8f5;
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin: 18px 0;
+  }
+  .workflow-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #4fc3f7;
+    margin-bottom: 16px;
+  }
+  .workflow-step {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+  .wf-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    color: #4fc3f7;
+    font-size: 8pt;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 12px;
+    margin-top: 2px;
+  }
+  .wf-text { font-size: 10.5pt; color: #2d3748; line-height: 1.5; }
+  .wf-arrow {
+    margin-left: 11px;
+    color: #4fc3f7;
+    font-size: 12pt;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  /* Role badge */
+  .role-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 8.5pt;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge-admin { background: #fff3cd; color: #856404; }
+  .badge-tech { background: #d1ecf1; color: #0c5460; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 40px 72px;
+    border-top: 1px solid #e8f0fb;
+    margin-top: 40px;
+  }
+  .footer p { font-size: 9pt; color: #aab; margin: 2px 0; }
+
+  @media print {
+    .cover { min-height: 100vh; }
+    .section-break { page-break-before: always; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════ COVER ══ -->
+<div class="cover">
+  <div class="cover-badge">Product Feature Guide &nbsp;·&nbsp; Version 1.0</div>
+  <h1>ITforP <span>CORE</span></h1>
+  <p class="cover-sub">Field Technician Operations Platform</p>
+  <div class="cover-divider"></div>
+  <p class="cover-desc">
+    A complete mobile operations system connecting office administrators and
+    field technicians — from job scheduling and dispatch to GPS check-in,
+    photo documentation, digital approvals, and payment tracking.
+  </p>
+  <p class="cover-meta"><strong>Platform:</strong> iOS &amp; Android &nbsp;·&nbsp; <strong>Built with:</strong> React Native / Expo &nbsp;·&nbsp; <strong>Backend:</strong> Supabase<br/>
+  <strong>Prepared by:</strong> KandCode Design Studio &nbsp;·&nbsp; © 2026 ITFORP. All rights reserved.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════ TOC ══ -->
+<div class="toc-page">
+  <p class="toc-title">Contents</p>
+  <h2 class="toc-heading">Table of Contents</h2>
+
+  <div class="toc-item"><span class="toc-num">01</span><span class="toc-label">Login &amp; Authentication</span></div>
+  <div class="toc-item"><span class="toc-num">02</span><span class="toc-label">Jobs List</span></div>
+  <div class="toc-item"><span class="toc-num">03</span><span class="toc-label">Job Detail — Overview Tab</span></div>
+  <div class="toc-sub"><span class="toc-label">Trip Status Workflow &nbsp;·&nbsp; GPS Check-In &nbsp;·&nbsp; Digital Signature &nbsp;·&nbsp; Reschedule Requests &nbsp;·&nbsp; PDF Export</span></div>
+  <div class="toc-item"><span class="toc-num">04</span><span class="toc-label">Job Detail — Instructions Tab</span></div>
+  <div class="toc-item"><span class="toc-num">05</span><span class="toc-label">Job Detail — Attachments Tab</span></div>
+  <div class="toc-item"><span class="toc-num">06</span><span class="toc-label">Job Detail — Notes Tab</span></div>
+  <div class="toc-item"><span class="toc-num">07</span><span class="toc-label">Job Detail — Chat Tab</span></div>
+  <div class="toc-item"><span class="toc-num">08</span><span class="toc-label">Dashboard</span><span class="role-badge badge-admin">Admin</span></div>
+  <div class="toc-item"><span class="toc-num">09</span><span class="toc-label">Calendar</span><span class="role-badge badge-admin">Admin</span></div>
+  <div class="toc-item"><span class="toc-num">10</span><span class="toc-label">Create &amp; Edit Jobs</span><span class="role-badge badge-admin">Admin</span></div>
+  <div class="toc-item"><span class="toc-num">11</span><span class="toc-label">Notifications</span></div>
+  <div class="toc-item"><span class="toc-num">12</span><span class="toc-label">Profile</span></div>
+  <div class="toc-item"><span class="toc-num">13</span><span class="toc-label">Key Workflows</span></div>
+  <div class="toc-item"><span class="toc-num">14</span><span class="toc-label">Role Permissions Summary</span></div>
+</div>
+
+<!-- ══════════════════════════════════════════════ CONTENT ══ -->
+<div class="content">
+
+<!-- ── 01 LOGIN ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 01</p>
+  <h2>Login &amp; Authentication</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="screenshot-box">
+  <div class="ss-icon">📱</div>
+  <div class="ss-label">SCREENSHOT: Login Screen</div>
+  <div class="ss-caption">The ITforP Core login screen with company branding</div>
+</div>
+
+<ul>
+  <li><strong>Branded Login Screen</strong> — Displays the ITforP logo on a full-screen company-branded background. If the logo fails to load (e.g., after a session reset), a styled text fallback automatically renders "ITforP CORE" so the screen always looks polished.</li>
+  <li><strong>Secure Email &amp; Password Login</strong> — Authenticated via Supabase Auth with encrypted credential storage.</li>
+  <li><strong>Password Reset</strong> — Tapping "Reset Password" navigates to a dedicated screen that sends a reset link to the user's registered email.</li>
+  <li><strong>Sign Up</strong> — New technician accounts can be created directly from the login screen.</li>
+  <li><strong>Persistent Sessions</strong> — Users remain logged in between app launches. The app navigates directly to the main screen on reopen — no re-login required.</li>
+</ul>
+
+<!-- ── 02 JOBS LIST ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 02</p>
+  <h2>Jobs List</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="ss-row">
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Jobs List — Admin</div>
+    <div class="ss-caption">All jobs across all technicians, grouped by status</div>
+  </div>
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Jobs List — Technician</div>
+    <div class="ss-caption">Technician view showing only their assigned jobs</div>
+  </div>
+</div>
+
+<h3>Role-Based Visibility</h3>
+<ul>
+  <li><strong>Admins</strong> see every job in the system across all technicians.</li>
+  <li><strong>Technicians</strong> see only the jobs assigned to them — nothing more.</li>
+</ul>
+
+<h3>Status Sections</h3>
+<p>Jobs are automatically sorted and grouped into labeled sections:</p>
+<table>
+  <thead><tr><th>Section</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>Active</td><td>Jobs currently being worked on by a technician</td></tr>
+    <tr><td>Pending Approval</td><td>Work completed by the tech, awaiting admin sign-off</td></tr>
+    <tr><td>Scheduled</td><td>Upcoming jobs not yet started</td></tr>
+    <tr><td>Completed</td><td>Fully finished and admin-approved jobs</td></tr>
+    <tr><td>Closed</td><td>Archived jobs — fully resolved</td></tr>
+  </tbody>
+</table>
+
+<h3>Job Cards</h3>
+<p>Each card shows the job number, client name, site address, current status (color-coded), assigned technician, scheduled date, star rating (if reviewed), and payment status indicators (admin only).</p>
+
+<h3>Real-Time &amp; Auto-Refresh</h3>
+<ul>
+  <li><strong>Pull-to-Refresh</strong> — Swipe down at any time to manually reload.</li>
+  <li><strong>Real-Time Updates</strong> — The list automatically updates when any job changes using Supabase real-time subscriptions, with a 15-second polling fallback to ensure accuracy even in poor network conditions.</li>
+  <li><strong>Auto-Refresh on Focus</strong> — The list silently refreshes whenever the user returns to it from a job detail screen.</li>
+</ul>
+
+<!-- ── 03 OVERVIEW TAB ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 03</p>
+  <h2>Job Detail — Overview Tab</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="ss-row">
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Overview — Job Header</div>
+    <div class="ss-caption">Client info, address, and admin action buttons</div>
+  </div>
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Overview — Trip Card</div>
+    <div class="ss-caption">Trip card with status, schedule, and action button</div>
+  </div>
+</div>
+
+<div class="ss-row">
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Collapsible Description</div>
+    <div class="ss-caption">Job description card expanded and collapsed</div>
+  </div>
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Collapsible Scope of Work</div>
+    <div class="ss-caption">Trip scope of work toggled open inside a trip card</div>
+  </div>
+</div>
+
+<div class="screenshot-box">
+  <div class="ss-icon">📱</div>
+  <div class="ss-label">SCREENSHOT: Reschedule Request Banner (Admin View)</div>
+  <div class="ss-caption">Orange banner alerting admin to a technician's reschedule request</div>
+</div>
+
+<h3>Job Header</h3>
+<ul>
+  <li>Displays job number, client name, and full site address. The address is tappable to open Apple Maps / Google Maps for turn-by-turn navigation.</li>
+  <li><strong>Collapsible Description Card</strong> — The job description section can be tapped to expand or collapse, keeping the view clean when it isn't needed.</li>
+  <li>Admin-only: <em>Edit Job</em> and <em>Export Work Order PDF</em> buttons appear at the top of the screen.</li>
+</ul>
+
+<h3>Trip Cards</h3>
+<p>A job can have multiple trips (site visits). Each trip card displays the trip number, scheduled date/time, assigned technician, current status badge, and GPS check-in info. Two sections inside each card are independently collapsible:</p>
+<ul>
+  <li><strong>Scope of Work</strong> — Tap the header to expand the full scope text, or collapse it to save space. Each trip's scope can be toggled independently.</li>
+</ul>
+
+<h3>Trip Status Workflow</h3>
+<p>The technician advances the trip through statuses using a single action button on each trip card:</p>
+
+<table>
+  <thead><tr><th>Status</th><th>Button Label</th><th>Who Can Advance</th></tr></thead>
+  <tbody>
+    <tr><td>Scheduled</td><td>Go En Route</td><td>Technician</td></tr>
+    <tr><td>En Route</td><td>Check In</td><td>Technician</td></tr>
+    <tr><td>Checked In</td><td>Check Out</td><td>Technician</td></tr>
+    <tr><td>Checked Out</td><td>Submit for Approval</td><td>Technician</td></tr>
+    <tr><td>Pending Approval</td><td>Approve / Complete</td><td>Admin</td></tr>
+    <tr><td>Completed</td><td>—</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h3>GPS Check-In Verification</h3>
+<p>When a technician taps <em>Check In</em>, the app reads their current GPS location and compares it to the job site address. If they are more than 500 meters away, they receive a warning and are asked to confirm they are physically on-site before the check-in is recorded.</p>
+
+<h3>Future Date Block &amp; Reschedule Request</h3>
+<div class="info-box"><p>If a trip is scheduled for a future date, technicians cannot tap <em>Go En Route</em>. They must send a reschedule request to the admin, who can then move the trip to today with a single tap.</p></div>
+<ul>
+  <li>The technician sees a message explaining the trip date and a <em>Send Request</em> button.</li>
+  <li>The request (with reason) is saved to the trip record in the database and logged in the event history.</li>
+  <li>The admin sees an <strong>orange banner</strong> on the trip card: "Reschedule Request from [technician]."</li>
+  <li>The admin can tap the banner to approve and reschedule the trip to today at 9:00 AM, or dismiss the request.</li>
+  <li>On approval, the technician receives a push notification and the action is logged in the event history.</li>
+</ul>
+
+<h3>Digital Signature Capture</h3>
+<p>When submitting a trip for approval, the technician can capture a digital signature from the client directly on-screen using a finger or stylus. The signature is stored with the job record.</p>
+
+<h3>Technician Star Rating</h3>
+<p>After a trip is completed, admins can leave a star rating (1–5 stars) and a written review for the technician. Ratings appear on job cards and the technician's profile.</p>
+
+<h3>Admin Trip Management</h3>
+<ul>
+  <li>Add new trips with a date, scope of work, and technician assignment</li>
+  <li>Edit existing trip details (date, scope of work)</li>
+  <li>Delete trips</li>
+  <li>Assign or reassign a technician to any trip</li>
+  <li>Remove a technician from a trip</li>
+</ul>
+
+<h3>Export Work Order PDF</h3>
+<p>Admins can generate and share a professional PDF work order for any job with a single tap. The PDF is formatted for client or record-keeping use.</p>
+
+<!-- ── 04 INSTRUCTIONS ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 04</p>
+  <h2>Job Detail — Instructions Tab</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="screenshot-box">
+  <div class="ss-icon">📱</div>
+  <div class="ss-label">SCREENSHOT: Instructions Tab</div>
+  <div class="ss-caption">Trip selector tabs and scope of work displayed as a bullet list</div>
+</div>
+
+<ul>
+  <li><strong>Trip Selector</strong> — A horizontal row of tab chips lets the user switch between trips. Each chip shows the trip number and a color-coded status indicator.</li>
+  <li><strong>Scope of Work</strong> — The full scope of work for the selected trip is shown as a clean bullet-point list for easy on-site reference.</li>
+  <li><strong>Scheduled Date &amp; Time</strong> — The confirmed scheduled date and time for the selected trip is displayed at the top of the section.</li>
+</ul>
+
+<!-- ── 05 ATTACHMENTS ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 05</p>
+  <h2>Job Detail — Attachments Tab</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="ss-row">
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Attachments — Grid View</div>
+    <div class="ss-caption">Photo grid with uploaded site images</div>
+  </div>
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Attachments — FAB Menu</div>
+    <div class="ss-caption">Floating action button expanded: Camera, Library, Document</div>
+  </div>
+</div>
+
+<ul>
+  <li><strong>Trip-Based Organization</strong> — Attachments are organized per trip. A selector chip at the top switches between trips.</li>
+  <li><strong>Photo Grid</strong> — Uploaded images display in a responsive grid. Tap any image to view it full-screen.</li>
+  <li><strong>Document List</strong> — Non-image files (PDFs, Word docs, etc.) are listed with filename and file size.</li>
+  <li><strong>Add Attachments</strong> — A floating action button offers three options:
+    <ul>
+      <li><em>Take Photo</em> — Opens the device camera for an instant capture</li>
+      <li><em>Photo Library</em> — Browse and select existing photos</li>
+      <li><em>Document / File</em> — Pick any file type from device storage</li>
+    </ul>
+  </li>
+  <li><strong>Automatic Image Compression</strong> — All photos are automatically resized and compressed before uploading. Images are scaled to a maximum of 1,920 px on the longest edge at 75% JPEG quality — drastically reducing upload times and cloud storage costs with no visible quality loss.</li>
+  <li><strong>Delete Attachments</strong> — Long-press any attachment to delete it (with a confirmation prompt).</li>
+</ul>
+
+<!-- ── 06 NOTES ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 06</p>
+  <h2>Job Detail — Notes Tab</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="screenshot-box">
+  <div class="ss-icon">📱</div>
+  <div class="ss-label">SCREENSHOT: Notes Tab</div>
+  <div class="ss-caption">Notes feed with trip filter and timestamped entries</div>
+</div>
+
+<ul>
+  <li><strong>Trip-Filtered Notes</strong> — Notes can be filtered to show only those for a specific trip, or viewed all together.</li>
+  <li><strong>Add Notes</strong> — Any user with job access can add a timestamped note attributed to their name.</li>
+  <li><strong>Admin Notifications</strong> — When a technician adds a note, all admins receive a push notification. The note author does not receive a self-notification.</li>
+</ul>
+
+<!-- ── 07 CHAT ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 07</p>
+  <h2>Job Detail — Chat Tab</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="screenshot-box">
+  <div class="ss-icon">📱</div>
+  <div class="ss-label">SCREENSHOT: Chat Tab</div>
+  <div class="ss-caption">Real-time job chat between technician and admin</div>
+</div>
+
+<ul>
+  <li><strong>Per-Job Chat Thread</strong> — Each job has its own dedicated conversation between the assigned technician(s) and admins.</li>
+  <li><strong>Real-Time Messaging</strong> — Messages appear instantly for all participants via Supabase real-time subscriptions.</li>
+  <li><strong>Message Attribution</strong> — Every message shows the sender's name and timestamp.</li>
+  <li><strong>No Notification Noise</strong> — Chat messages intentionally do not trigger push notifications, keeping the notification inbox focused on actionable job events. Users check the chat tab directly.</li>
+</ul>
+
+<!-- ── 08 DASHBOARD ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 08</p>
+  <h2>Dashboard <span class="role-badge badge-admin">Admin Only</span></h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="ss-row">
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Dashboard — Stat Cards</div>
+    <div class="ss-caption">KPI cards showing job counts at a glance</div>
+  </div>
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Dashboard — Technician Workload</div>
+    <div class="ss-caption">Ranked list of technicians by active job count</div>
+  </div>
+</div>
+
+<h3>Job Statistics Cards</h3>
+<p>Real-time KPI cards give management an instant operations overview:</p>
+
+<table>
+  <thead><tr><th>Card</th><th>What It Shows</th></tr></thead>
+  <tbody>
+    <tr><td>Total Jobs</td><td>All jobs in the system</td></tr>
+    <tr><td>Active</td><td>Jobs currently in progress</td></tr>
+    <tr><td>Pending Approval</td><td>Jobs awaiting admin sign-off</td></tr>
+    <tr><td>Completed</td><td>Successfully finished and approved jobs</td></tr>
+    <tr><td>Closed</td><td>Fully archived jobs</td></tr>
+    <tr><td>Unpaid</td><td>Completed jobs with outstanding client or tech payment</td></tr>
+    <tr><td>This Month</td><td>New jobs created in the current calendar month</td></tr>
+  </tbody>
+</table>
+
+<h3>Technician Workload</h3>
+<p>A ranked list of all technicians sorted by number of assigned jobs. Tap any technician to navigate directly to a filtered view of all jobs assigned to them.</p>
+
+<!-- ── 09 CALENDAR ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 09</p>
+  <h2>Calendar <span class="role-badge badge-admin">Admin Only</span></h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="ss-row">
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Calendar — Month View</div>
+    <div class="ss-caption">Monthly calendar with trip dots on scheduled dates</div>
+  </div>
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Calendar — Day Detail</div>
+    <div class="ss-caption">Selected day listing all trips scheduled for that date</div>
+  </div>
+</div>
+
+<ul>
+  <li><strong>Monthly Calendar View</strong> — Navigate forward and backward through months. Each day with scheduled trips shows colored indicator dots (up to 3, with a "+N" overflow label for busier days).</li>
+  <li><strong>Day Detail Panel</strong> — Tap any date to see a list of all trips scheduled for that day, showing job number, client name, trip number, and status badge.</li>
+  <li><strong>Tap to Open</strong> — Tap any trip in the day detail to navigate directly to that job's detail screen.</li>
+</ul>
+
+<!-- ── 10 CREATE / EDIT ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 10</p>
+  <h2>Create &amp; Edit Jobs <span class="role-badge badge-admin">Admin Only</span></h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="ss-row">
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Create Job Screen</div>
+    <div class="ss-caption">Admin entering new job details</div>
+  </div>
+  <div class="screenshot-box">
+    <div class="ss-icon">📱</div>
+    <div class="ss-label">SCREENSHOT: Edit Job Screen</div>
+    <div class="ss-caption">Admin editing an existing job</div>
+  </div>
+</div>
+
+<h3>Create Job Fields</h3>
+<ul>
+  <li><strong>Job Number</strong> — Unique identifier for the job</li>
+  <li><strong>Title / Description</strong> — Brief summary of the work to be performed</li>
+  <li><strong>Client Name</strong> — The customer or company name</li>
+  <li><strong>Store / Unit Number</strong> — Location identifier (optional)</li>
+  <li><strong>Site Address</strong> — Full street address of the work location</li>
+  <li><strong>Custom Fields</strong> — Admins can add any number of additional label/value pairs (e.g., "PO Number," "Contract ID," "On-site Contact") to capture job-specific metadata</li>
+</ul>
+
+<h3>Additional Admin Tools</h3>
+<ul>
+  <li><strong>Import Jobs (CSV)</strong> — Bulk-import jobs from a CSV file by mapping columns to job fields.</li>
+  <li><strong>Add Technician</strong> — Create new technician accounts directly from within the app.</li>
+</ul>
+
+<!-- ── 11 NOTIFICATIONS ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 11</p>
+  <h2>Notifications</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="screenshot-box">
+  <div class="ss-icon">📱</div>
+  <div class="ss-label">SCREENSHOT: Notifications Screen</div>
+  <div class="ss-caption">Notification inbox with unread count banner and individual entries</div>
+</div>
+
+<ul>
+  <li><strong>In-App Inbox</strong> — All notifications are stored in a scrollable inbox accessible from the navigation bar bell icon.</li>
+  <li><strong>Unread Indicators</strong> — Unread items appear in bold. A banner at the top shows the total unread count with a one-tap <em>Mark All Read</em> shortcut.</li>
+  <li><strong>Tap to Navigate</strong> — Tapping any notification opens the relevant job directly.</li>
+  <li><strong>Delete</strong> — Individual notifications can be deleted from the inbox.</li>
+</ul>
+
+<h3>Push Notification Events</h3>
+<p>The following events trigger push notifications to relevant users:</p>
+<div class="feature-grid">
+  <span class="feature-pill">Job status changes</span>
+  <span class="feature-pill">Check-in / check-out</span>
+  <span class="feature-pill">Submitted for approval</span>
+  <span class="feature-pill">Job approved</span>
+  <span class="feature-pill">New notes added</span>
+  <span class="feature-pill">Reschedule request sent</span>
+  <span class="feature-pill">Reschedule approved</span>
+</div>
+
+<div class="info-box"><p><strong>Smart Filtering:</strong> Users never receive push notifications for their own actions. Admins are not notified when they personally update a job. Chat messages do not trigger push notifications.</p></div>
+
+<!-- ── 12 PROFILE ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 12</p>
+  <h2>Profile</h2>
+  <hr class="section-rule" />
+</div>
+
+<div class="screenshot-box">
+  <div class="ss-icon">📱</div>
+  <div class="ss-label">SCREENSHOT: Profile Screen</div>
+  <div class="ss-caption">User profile showing name, email, role, and logout option</div>
+</div>
+
+<ul>
+  <li><strong>Account Information</strong> — Full name, email address, and role (Admin or Field Technician).</li>
+  <li><strong>Avatar</strong> — A circular avatar displays the user's initials.</li>
+  <li><strong>App Version</strong> — Shown at the bottom for easy reference during support calls.</li>
+  <li><strong>Logout</strong> — A confirmation dialog prevents accidental logouts. The user is returned to the Login screen on confirmation.</li>
+</ul>
+
+<!-- ── 13 KEY WORKFLOWS ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 13</p>
+  <h2>Key Workflows</h2>
+  <hr class="section-rule" />
+</div>
+
+<h3>13.1 — Full Job Lifecycle (Technician View)</h3>
+<div class="workflow">
+  <p class="workflow-title">End-to-End Trip Execution</p>
+  <div class="workflow-step"><div class="wf-dot">1</div><div class="wf-text"><strong>Job assigned</strong> by admin — technician receives push notification</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">2</div><div class="wf-text">Technician opens job in Jobs List → reviews scope in <strong>Instructions tab</strong></div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">3</div><div class="wf-text">Day of job: taps <strong>Go En Route</strong> (blocked if future date — see 13.2)</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">4</div><div class="wf-text">Arrives on site: taps <strong>Check In</strong> — GPS location is verified against site address</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">5</div><div class="wf-text">Completes work — uploads photos, adds notes, communicates via Chat</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">6</div><div class="wf-text">Taps <strong>Check Out</strong> — optionally captures <strong>client digital signature</strong></div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">7</div><div class="wf-text">Taps <strong>Submit for Approval</strong> — admin receives push notification</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">8</div><div class="wf-text">Admin reviews job, attachments &amp; notes → taps <strong>Approve / Complete</strong></div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">9</div><div class="wf-text">Job moves to <strong>Completed</strong> — technician notified</div></div>
+</div>
+
+<h3>13.2 — Reschedule Request Workflow</h3>
+<div class="workflow">
+  <p class="workflow-title">Future-Date Trip Reschedule</p>
+  <div class="workflow-step"><div class="wf-dot">1</div><div class="wf-text">Technician taps <em>Go En Route</em> on a future-dated trip — app blocks the action</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">2</div><div class="wf-text">App shows scheduled date and offers a <strong>Send Request</strong> button</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">3</div><div class="wf-text">Technician enters a reason and submits — request saved to the trip &amp; event history logged</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">4</div><div class="wf-text"><strong>Admin receives push notification</strong></div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">5</div><div class="wf-text">Admin opens job → sees <strong>orange banner</strong> on the trip card</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">6</div><div class="wf-text">Admin taps banner → chooses <strong>Reschedule to Today</strong> (sets time to 9:00 AM)</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">7</div><div class="wf-text">Technician receives push notification — trip is now ready to start</div></div>
+  <div class="wf-arrow">↓</div>
+  <div class="workflow-step"><div class="wf-dot">8</div><div class="wf-text">Action <strong>logged in Event History</strong> with timestamp and user attribution</div></div>
+</div>
+
+<h3>13.3 — Multi-Trip Jobs</h3>
+<p>A single job can have multiple trips (site visits) — useful for follow-up visits, phased projects, or warranty returns. Each trip has its own:</p>
+<div class="feature-grid">
+  <span class="feature-pill">Scope of work</span>
+  <span class="feature-pill">Scheduled date &amp; time</span>
+  <span class="feature-pill">Assigned technician</span>
+  <span class="feature-pill">Attachments</span>
+  <span class="feature-pill">Notes</span>
+  <span class="feature-pill">Status progression</span>
+</div>
+<p>Admins can add additional trips from the Overview tab at any time. All detail tabs (Instructions, Attachments, Notes) include a trip selector to switch context.</p>
+
+<h3>13.4 — Event History &amp; Audit Trail</h3>
+<p>Every significant action is automatically logged:</p>
+<div class="feature-grid">
+  <span class="feature-pill">Status changes</span>
+  <span class="feature-pill">Check-in &amp; check-out</span>
+  <span class="feature-pill">Submission &amp; approval</span>
+  <span class="feature-pill">Reschedule requests</span>
+  <span class="feature-pill">Reschedule approvals</span>
+  <span class="feature-pill">Technician assignments</span>
+  <span class="feature-pill">Notes added</span>
+  <span class="feature-pill">Attachments uploaded</span>
+</div>
+<p>Each event records the timestamp and the user who performed the action, creating a complete and tamper-evident audit trail for every job.</p>
+
+<!-- ── 14 PERMISSIONS ── -->
+<div class="section-break">
+  <p class="section-eyebrow">Section 14</p>
+  <h2>Role Permissions Summary</h2>
+  <hr class="section-rule" />
+</div>
+
+<table>
+  <thead><tr><th>Feature</th><th>Admin</th><th>Field Technician</th></tr></thead>
+  <tbody>
+    <tr><td>View all jobs</td><td>✅ All jobs</td><td>✅ Own jobs only</td></tr>
+    <tr><td>Create / Edit jobs</td><td>✅</td><td>—</td></tr>
+    <tr><td>Add / Edit / Delete trips</td><td>✅</td><td>—</td></tr>
+    <tr><td>Assign technicians to trips</td><td>✅</td><td>—</td></tr>
+    <tr><td>Approve completed trips</td><td>✅</td><td>—</td></tr>
+    <tr><td>Reschedule trips</td><td>✅</td><td>Request only</td></tr>
+    <tr><td>Export PDF work orders</td><td>✅</td><td>—</td></tr>
+    <tr><td>Dashboard &amp; Calendar</td><td>✅</td><td>—</td></tr>
+    <tr><td>Import jobs (CSV)</td><td>✅</td><td>—</td></tr>
+    <tr><td>Add technician accounts</td><td>✅</td><td>—</td></tr>
+    <tr><td>Leave star ratings for techs</td><td>✅</td><td>—</td></tr>
+    <tr><td>Advance trip status</td><td>—</td><td>✅</td></tr>
+    <tr><td>GPS Check-In</td><td>—</td><td>✅</td></tr>
+    <tr><td>Upload photos &amp; documents</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Add notes</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Send chat messages</td><td>✅</td><td>✅</td></tr>
+    <tr><td>View event history</td><td>✅</td><td>✅</td></tr>
+  </tbody>
+</table>
+
+</div><!-- /content -->
+
+<!-- ── FOOTER ── -->
+<div class="footer">
+  <p>ITforP Core — Field Technician Operations Platform</p>
+  <p>© 2026 ITFORP. All rights reserved. &nbsp;·&nbsp; Designed by kandcodesignstudio.com</p>
+</div>
+
+</body>
+</html>
