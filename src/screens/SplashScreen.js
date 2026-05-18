@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { Colors } from '../utils/colors';
 
 export default function SplashScreen() {
@@ -25,9 +25,9 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.logoContainer, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
-        <Text style={styles.brandSmall}>ITforP</Text>
+        <Image source={require('../../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
         <Text style={styles.brandLarge}>CORE</Text>
-        <Text style={styles.tagline}>Technician Field Operations</Text>
+        <Text style={styles.tagline}>Centralized Operations & Resource Engine</Text>
       </Animated.View>
     </View>
   );
@@ -43,24 +43,23 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
   },
-  brandSmall: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.accentLight,
-    letterSpacing: 6,
-    marginBottom: -4,
+  logoImage: {
+    width: 280,
+    height: 100,
+    marginBottom: 8,
   },
   brandLarge: {
     fontSize: 80,
     fontWeight: '900',
     color: Colors.white,
-    letterSpacing: -2,
+    letterSpacing: 42,
     lineHeight: 88,
+    marginLeft: 38,
   },
   tagline: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 2,
+    letterSpacing: 1,
     marginTop: 8,
     textTransform: 'uppercase',
   },

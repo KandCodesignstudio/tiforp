@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { useJobs } from '../context/JobsContext';
 import { Colors } from '../utils/colors';
 
 const FILE_ICONS = {
@@ -53,9 +54,14 @@ function AttachmentRow({ item, onDelete }) {
 }
 
 export default function AttachmentsScreen({ route }) {
-  const { job } = route.params;
-  const [attachments, setAttachments] = useState(job.attachments ?? []);
+  const { jobId } = route.params;
+  const { getJobById } = useJobs();
+  const job = getJobById(jobId);
+
+  const [attachments, setAttachments] = useState(job?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
+
+  if (!job) return null;
 
   const addAttachment = (file) => {
     setAttachments((prev) => [
@@ -104,6 +110,31 @@ export default function AttachmentsScreen({ route }) {
     }
   };
 
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Allow camera access to take photos.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        setUploading(true);
+        await new Promise((r) => setTimeout(r, 600));
+        const asset = result.assets[0];
+        const name = `photo_${Date.now()}.jpg`;
+        addAttachment({ name, size: asset.fileSize, uri: asset.uri });
+        setUploading(false);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not take photo.');
+      setUploading(false);
+    }
+  };
+
   const deleteAttachment = (id) => {
     Alert.alert('Remove Attachment', 'Remove this file?', [
       { text: 'Cancel', style: 'cancel' },
@@ -113,8 +144,9 @@ export default function AttachmentsScreen({ route }) {
 
   const showAddOptions = () => {
     Alert.alert('Add Attachment', 'Choose source', [
-      { text: 'Document / File', onPress: pickDocument },
+      { text: 'Take Photo', onPress: takePhoto },
       { text: 'Photo Library', onPress: pickPhoto },
+      { text: 'Document / File', onPress: pickDocument },
       { text: 'Cancel', style: 'cancel' },
     ]);
   };

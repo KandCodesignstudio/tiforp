@@ -1,29 +1,54 @@
 {
   "expo": {
-    "name": "ITforP Core",
+    "name": "",
     "slug": "itforp-core",
     "version": "1.0.0",
+    "newArchEnabled": true,
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1A3A6B"
+      "backgroundColor": "#0f2a55"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.itforp.core",
+      "newArchEnabled": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#0f2a55"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.itforp.core",
+      "newArchEnabled": false
     },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo.png",
+          "color": "#1A3A6B",
+          "sounds": []
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f5b2d7b1-4fe3-4ead-bdfb-09f8333e3ca4"
+      }
+    },
+    "owner": "kandcodesignstudio"
   }
 }

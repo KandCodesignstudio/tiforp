@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView, Image,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Colors } from '../utils/colors';
@@ -34,8 +34,11 @@ export default function LoginScreen({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.brandSmall}>ITforP</Text>
-          <Text style={styles.brandLarge}>CORE</Text>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         <View style={styles.form}>
@@ -83,6 +86,11 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.signupBtnText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerCopyright}>© 2026 ITFORP. All rights reserved.</Text>
+          <Text style={styles.footerCredit}>Designed by kandcodesignstudio.com</Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -98,18 +106,9 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   header: { alignItems: 'center', marginBottom: 40 },
-  brandSmall: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.accentLight,
-    letterSpacing: 5,
-    marginBottom: -2,
-  },
-  brandLarge: {
-    fontSize: 60,
-    fontWeight: '900',
-    color: Colors.white,
-    letterSpacing: -1,
+  logo: {
+    width: 220,
+    height: 120,
   },
   form: { width: '100%', alignItems: 'center' },
   input: {
@@ -149,4 +148,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signupBtnText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
+  footer: { marginTop: 40, alignItems: 'center', gap: 4 },
+  footerCopyright: { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
+  footerCredit: { fontSize: 11, color: 'rgba(255,255,255,0.35)' },
 });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { TouchableOpacity, Text } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +11,7 @@ import SignupScreen from '../screens/SignupScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import JobsScreen from '../screens/JobsScreen';
 import JobDetailNavigator from './JobDetailNavigator';
+import ProfileScreen from '../screens/ProfileScreen';
 import { Colors } from '../utils/colors';
 
 const Stack = createNativeStackNavigator();
@@ -40,13 +41,18 @@ function MainStack() {
         name="JobDetail"
         component={JobDetailNavigator}
         options={({ route, navigation }) => ({
-          title: route.params?.job?.client?.name ?? 'Job Detail',
+          title: route.params?.clientName ?? 'Job Detail',
           headerLeft: () => (
             <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 8 }}>
               <Ionicons name="chevron-back" size={24} color={Colors.white} />
             </TouchableOpacity>
           ),
         })}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'PROFILE' }}
       />
     </Stack.Navigator>
   );

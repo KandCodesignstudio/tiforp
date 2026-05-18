@@ -4,15 +4,8 @@ import {
   ActivityIndicator, RefreshControl, StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../hooks/useJobs';
 import { Colors } from '../utils/colors';
-
-function formatDate(date) {
-  if (!date) return '';
-  const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function formatDateTime(date) {
   if (!date) return '';
@@ -56,7 +49,6 @@ function JobCard({ job, onPress }) {
 }
 
 export default function JobsScreen({ navigation }) {
-  const { logout, user } = useAuth();
   const { jobs, loading } = useJobs();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -86,7 +78,7 @@ export default function JobsScreen({ navigation }) {
     return (
       <JobCard
         job={item}
-        onPress={() => navigation.navigate('JobDetail', { job: item })}
+        onPress={() => navigation.navigate('JobDetail', { jobId: item.id, clientName: item.client?.name })}
       />
     );
   };
@@ -96,8 +88,8 @@ export default function JobsScreen({ navigation }) {
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>JOBS</Text>
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-          <Ionicons name="log-out-outline" size={24} color={Colors.white} />
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileBtn}>
+          <Ionicons name="person-circle-outline" size={28} color={Colors.white} />
         </TouchableOpacity>
       </View>
 
@@ -138,7 +130,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
     letterSpacing: 2,
   },
-  logoutBtn: { padding: 4 },
+  profileBtn: { padding: 2 },
   loader: { flex: 1, marginTop: 40 },
   list: { paddingHorizontal: 16, paddingBottom: 24 },
   sectionHeader: {

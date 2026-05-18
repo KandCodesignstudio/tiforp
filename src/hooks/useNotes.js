@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase';
-import { MOCK_NOTES } from '../config/mockData';
-
-const USE_MOCK = true; // Set to false after configuring Supabase
 
 function transformNote(row) {
   return {
@@ -10,6 +7,7 @@ function transformNote(row) {
     jobId: row.job_id,
     tripNumber: row.trip_number,
     author: row.author,
+    userId: row.user_id ?? null,
     text: row.text,
     createdAt: row.created_at ? new Date(row.created_at) : null,
   };
@@ -19,16 +17,7 @@ export function useNotes(jobId) {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!jobId) return;
-
-    if (USE_MOCK) {
-      setNotes(MOCK_NOTES[jobId] || []);
-      setLoading(false);
-      return;
-    }
-
-    // Initial fetch
+  const fetchNotes = () =>
     supabase
       .from('notes')
       .select('*')
@@ -39,29 +28,78 @@ export function useNotes(jobId) {
         setLoading(false);
       });
 
-    // Real-time subscription
+  useEffect(() => {
+    if (!jobId) return;
+
+    fetchNotes();
+
     const channel = supabase
-      .channel(`notes-${jobId}`)
+      .channel(`notes-${jobId}-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notes', filter: `job_id=eq.${jobId}` },
-        (payload) => setNotes((prev) => [...prev, transformNote(payload.new)]),
+        (payload) => {
+          const real = transformNote(payload.new);
+          setNotes((prev) => {
+            const withoutOptimistic = prev.filter(
+              (n) => !(n.id.startsWith?.('optimistic-') && n.text === real.text && n.userId === real.userId)
+            );
+            if (withoutOptimistic.some((n) => n.id === real.id)) return withoutOptimistic;
+            return [...withoutOptimistic, real];
+          });
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notes', filter: `job_id=eq.${jobId}` },
+        (payload) => setNotes((prev) => prev.map((n) => n.id === payload.new.id ? transformNote(payload.new) : n)),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'notes', filter: `job_id=eq.${jobId}` },
+        (payload) => setNotes((prev) => prev.filter((n) => n.id !== payload.old.id)),
       )
       .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, [jobId]);
 
-  const addNote = async (jobId, text, author, tripNumber) => {
-    if (USE_MOCK) {
-      setNotes((prev) => [
-        ...prev,
-        { id: `note_${Date.now()}`, jobId, tripNumber, author, text, createdAt: new Date() },
-      ]);
-      return;
+  const addNote = async (jobId, text, author, tripNumber, userId) => {
+    const optimistic = {
+      id: `optimistic-${Date.now()}`,
+      jobId,
+      tripNumber,
+      author,
+      userId: userId ?? null,
+      text,
+      createdAt: new Date(),
+    };
+    setNotes((prev) => [...prev, optimistic]);
+    const { error } = await supabase.from('notes').insert({
+      job_id: jobId, text, author, trip_number: tripNumber, user_id: userId ?? null,
+    });
+    if (error) {
+      setNotes((prev) => prev.filter((n) => n.id !== optimistic.id));
+      throw error;
     }
-    await supabase.from('notes').insert({ job_id: jobId, text, author, trip_number: tripNumber });
   };
 
-  return { notes, loading, addNote };
+  const updateNote = async (id, text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setNotes((prev) => prev.map((n) => n.id === id ? { ...n, text: trimmed } : n));
+    await supabase.from('notes').update({ text: trimmed }).eq('id', id);
+  };
+
+  const deleteNote = async (id) => {
+    const prev = notes;
+    setNotes((n) => n.filter((note) => note.id !== id));
+    const { error, count } = await supabase.from('notes').delete({ count: 'exact' }).eq('id', id);
+    if (error || count === 0) {
+      setNotes(prev); // rollback — either an error or RLS silently blocked it
+      throw error ?? new Error('Delete was blocked — check Supabase RLS policy on the notes table');
+    }
+  };
+
+  return { notes, loading, addNote, updateNote, deleteNote, refresh: fetchNotes };
 }

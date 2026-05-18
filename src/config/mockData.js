@@ -144,6 +144,53 @@ export const MOCK_JOBS = [
     nextTrip: null,
     createdAt: new Date('2025-10-15T08:00:00'),
   },
+  {
+    id: 'job_005',
+    jobNumber: '25S00112',
+    status: 'in_progress',
+    client: {
+      name: 'NEXUS LOGISTICS CO.',
+      storeNumber: 'WAREHOUSE #3',
+      address: '1800 Industrial Pkwy, Fort Worth, TX 76102',
+      lat: 32.7555,
+      lng: -97.3308,
+      contacts: [
+        { name: 'Angela Foster', role: 'Operations Manager', phone: '817-555-0221' },
+        { name: 'Derek Simmons', role: 'IT Lead', phone: '817-555-0243' },
+      ],
+    },
+    description:
+      'Structured cabling installation for new warehouse expansion. 48 data drops, 2 IDFs, and fiber backbone between buildings.',
+    trips: [
+      {
+        id: 'trip_005_1',
+        tripNumber: 1,
+        scheduledAt: new Date('2026-05-20T07:30:00'),
+        status: 'scheduled',
+        scopeOfWork:
+          'Install IDF-A enclosure and patch panel\nRun fiber backbone between Building A and B\nTest fiber with OTDR',
+      },
+      {
+        id: 'trip_005_2',
+        tripNumber: 2,
+        scheduledAt: new Date('2026-05-22T07:30:00'),
+        status: 'scheduled',
+        scopeOfWork:
+          'Pull Cat6 for drops 1-24 in Building A\nTerminate and test all drops\nLabel per TIA-606 standard',
+      },
+      {
+        id: 'trip_005_3',
+        tripNumber: 3,
+        scheduledAt: new Date('2026-05-27T07:30:00'),
+        status: 'scheduled',
+        scopeOfWork:
+          'Pull Cat6 for drops 25-48 in Building B\nInstall IDF-B and patch panel\nFinal test and certification report',
+      },
+    ],
+    attachments: [],
+    nextTrip: new Date('2026-05-20T07:30:00'),
+    createdAt: new Date('2026-05-10T08:00:00'),
+  },
 ];
 
 export const MOCK_NOTES = {
@@ -201,6 +248,16 @@ export const MOCK_NOTES = {
       author: 'ASD Dispatch',
       text: 'Job complete. All ATMs and cameras operational. Sign-off received.',
       createdAt: new Date('2025-10-28T12:00:00'),
+    },
+  ],
+  job_005: [
+    {
+      id: 'note_005_1',
+      tripId: 'trip_005_1',
+      tripNumber: 1,
+      author: 'ASD Dispatch',
+      text: 'Job created. Site contact Angela will provide dock access. Confirm arrival window 24hrs before.',
+      createdAt: new Date('2026-05-10T08:30:00'),
     },
   ],
 };
