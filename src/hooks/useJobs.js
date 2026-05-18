@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../config/supabase';
 import { rollupJobStatus, getTripStatus } from '../utils/status';
 import { notifyAdmins, notifyUser } from '../utils/notifications';
@@ -36,9 +36,12 @@ function transformJob(row) {
   };
 }
 
+const POLL_INTERVAL_MS = 15000;
+
 export function useJobs({ isAdmin = false, userId = null, channelId = 'default', userProfile = null } = {}) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const fetchRef = useRef(null);
 
   const fetchJobs = () => {
     let query = supabase.from('jobs').select('*').order('created_at', { ascending: false });
@@ -49,18 +52,26 @@ export function useJobs({ isAdmin = false, userId = null, channelId = 'default',
     });
   };
 
+  fetchRef.current = fetchJobs;
+
   useEffect(() => {
-    fetchJobs();
+    fetchRef.current();
 
     const channel = supabase
-      .channel(`jobs-changes-${channelId}-${Math.random().toString(36).slice(2)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, fetchJobs)
+      .channel(`jobs-changes-${channelId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => fetchRef.current())
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, [isAdmin, userId]);
+    const poll = setInterval(() => fetchRef.current(), POLL_INTERVAL_MS);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+    };
+  }, [isAdmin, userId, channelId]);
 
   const updateJobStatus = async (jobId, status) => {
+    setJobs((prev) => prev.map((j) => j.id === jobId ? { ...j, status } : j));
     await supabase.from('jobs').update({ status }).eq('id', jobId);
   };
 
