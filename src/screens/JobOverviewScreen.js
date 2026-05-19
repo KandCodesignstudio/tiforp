@@ -155,6 +155,7 @@ export default function JobOverviewScreen({ route, navigation }) {
   const [cancelling, setCancelling] = useState(false);
   const [rescheduleRequestTrip, setRescheduleRequestTrip] = useState(null);
   const [rescheduleReason, setRescheduleReason] = useState('');
+  const [rescheduleRequestDate, setRescheduleRequestDate] = useState(null);
   const [sendingReschedule, setSendingReschedule] = useState(false);
   const [showAddTrip, setShowAddTrip] = useState(false);
   const [newTripDate, setNewTripDate] = useState(null);
@@ -329,67 +330,73 @@ export default function JobOverviewScreen({ route, navigation }) {
   const doCheckIn = (trip) => updateTripStatus(job.id, trip.id, 'checked_in');
 
   const handleRescheduleToToday = (trip) => {
-    const today = new Date();
-    today.setHours(9, 0, 0, 0);
-    Alert.alert(
-      'Reschedule to Today',
-      `Reschedule Trip ${trip.tripLabel ?? trip.tripNumber} to today (${today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}) and notify the technician?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reschedule',
-          onPress: async () => {
-            const updatedTrips = job.trips.map((t) => ({
-              ...t,
-              scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
-              checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
-              checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
-              ...(t.id === trip.id && {
-                scheduledAt: today.toISOString(),
-                rescheduleRequest: null,
-              }),
-            }));
-            await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
-            const adminName = profile?.full_name ?? user?.email ?? 'Admin';
-            logJobEvent(jobId, 'rescheduled', `Trip ${trip.tripLabel ?? trip.tripNumber} — Admin rescheduled to today`, adminName).catch(() => {});
-            const techId = trip.technicianId ?? job.technicianId;
-            if (techId) {
-              notifyUser(
-                techId,
-                'Trip Rescheduled — You\'re Good to Go',
-                `Admin rescheduled Trip ${trip.tripLabel ?? trip.tripNumber} on job ${job.jobNumber ?? jobId} to today. You can now proceed.`,
-                { jobId }
-              ).catch(() => {});
-            }
-          },
+    const req = trip.rescheduleRequest;
+    const requestedDate = req?.requestedDate ? new Date(req.requestedDate) : null;
+    const fallback = new Date();
+    fallback.setHours(9, 0, 0, 0);
+    const newDate = requestedDate ?? fallback;
+    const dateLabel = newDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const title = requestedDate ? 'Approve Reschedule' : 'Reschedule to Today';
+    const msg = requestedDate
+      ? `Approve rescheduling Trip ${trip.tripLabel ?? trip.tripNumber} to ${dateLabel} (as requested) and notify the technician?`
+      : `Reschedule Trip ${trip.tripLabel ?? trip.tripNumber} to today (${dateLabel}) and notify the technician?`;
+    Alert.alert(title, msg, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Approve',
+        onPress: async () => {
+          const updatedTrips = job.trips.map((t) => ({
+            ...t,
+            scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
+            checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
+            checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+            ...(t.id === trip.id && {
+              scheduledAt: newDate.toISOString(),
+              rescheduleRequest: null,
+            }),
+          }));
+          await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
+          const adminName = profile?.full_name ?? user?.email ?? 'Admin';
+          logJobEvent(jobId, 'rescheduled', `Trip ${trip.tripLabel ?? trip.tripNumber} — Admin approved reschedule to ${dateLabel}`, adminName).catch(() => {});
+          const techId = trip.technicianId ?? job.technicianId;
+          if (techId) {
+            notifyUser(
+              techId,
+              'Trip Rescheduled — You\'re Good to Go',
+              `Admin approved your reschedule request. Trip ${trip.tripLabel ?? trip.tripNumber} on job ${job.jobNumber ?? jobId} is now set for ${dateLabel}.`,
+              { jobId }
+            ).catch(() => {});
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleSendRescheduleRequest = async (trip, reason) => {
+  const handleSendRescheduleRequest = async (trip, reason, requestedDate) => {
     setSendingReschedule(true);
     try {
       const requester = profile?.full_name ?? user?.email ?? 'Tech';
+      const requestedDateISO = requestedDate instanceof Date ? requestedDate.toISOString() : null;
+      const dateStr = requestedDate
+        ? requestedDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+        : null;
       const updatedTrips = job.trips.map((t) => ({
         ...t,
         scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
         checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
         checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
         ...(t.id === trip.id && {
-          rescheduleRequest: { requestedBy: requester, requestedAt: new Date().toISOString(), reason },
+          rescheduleRequest: { requestedBy: requester, requestedAt: new Date().toISOString(), reason, requestedDate: requestedDateISO },
         }),
       }));
       await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
-      logJobEvent(jobId, 'reschedule_requested', `Trip ${trip.tripLabel ?? trip.tripNumber} — ${requester} requested reschedule: ${reason}`, requester).catch(() => {});
-      notifyAdmins(
-        'Reschedule Request',
-        `${requester} needs to reschedule Trip ${trip.tripLabel ?? trip.tripNumber} on job ${job.jobNumber ?? jobId}: ${reason}`,
-        { jobId },
-        user?.id
-      ).catch(() => {});
+      const logMsg = `Trip ${trip.tripLabel ?? trip.tripNumber} — ${requester} requested reschedule${dateStr ? ` to ${dateStr}` : ''}: ${reason}`;
+      logJobEvent(jobId, 'reschedule_requested', logMsg, requester).catch(() => {});
+      const notifyMsg = `${requester} needs to reschedule Trip ${trip.tripLabel ?? trip.tripNumber} on job ${job.jobNumber ?? jobId}${dateStr ? ` to ${dateStr}` : ''}: ${reason}`;
+      notifyAdmins('Reschedule Request', notifyMsg, { jobId }, user?.id).catch(() => {});
       setRescheduleRequestTrip(null);
       setRescheduleReason('');
+      setRescheduleRequestDate(null);
       Alert.alert('Request Sent', 'Your admin has been notified.');
     } catch (e) {
       Alert.alert('Error', e.message);
@@ -820,7 +827,7 @@ export default function JobOverviewScreen({ route, navigation }) {
           {!isAdmin && activeTrip.status !== 'completed' && activeTrip.status !== 'pending_approval' && activeTrip.status !== 'for_return' && !activeTrip.rescheduleRequest && (
             <TouchableOpacity
               style={[styles.linkBtn, { marginTop: 4 }]}
-              onPress={() => { setRescheduleRequestTrip(activeTrip); setRescheduleReason(''); }}
+              onPress={() => { setRescheduleRequestTrip(activeTrip); setRescheduleReason(''); setRescheduleRequestDate(null); }}
             >
               <Text style={[styles.linkBtnText, { color: Colors.warning }]}>📅 Request Reschedule</Text>
             </TouchableOpacity>
@@ -1174,16 +1181,25 @@ export default function JobOverviewScreen({ route, navigation }) {
                   <View style={styles.rescheduleRequestBanner}>
                     <View style={styles.rescheduleRequestInfo}>
                       <Ionicons name="calendar-outline" size={13} color={Colors.warning} />
-                      <Text style={styles.rescheduleRequestText}>
-                        {trip.rescheduleRequest.requestedBy} requested reschedule
-                        {trip.rescheduleRequest.reason ? `: ${trip.rescheduleRequest.reason}` : ' — on site, needs date update'}
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.rescheduleRequestText}>
+                          {trip.rescheduleRequest.requestedBy} requested reschedule
+                          {trip.rescheduleRequest.reason ? `: ${trip.rescheduleRequest.reason}` : ''}
+                        </Text>
+                        {!!trip.rescheduleRequest.requestedDate && (
+                          <Text style={[styles.rescheduleRequestText, { marginTop: 2, opacity: 0.85 }]}>
+                            📅 {new Date(trip.rescheduleRequest.requestedDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </Text>
+                        )}
+                      </View>
                     </View>
                     <TouchableOpacity
                       style={styles.rescheduleBtn}
                       onPress={() => handleRescheduleToToday(trip)}
                     >
-                      <Text style={styles.rescheduleBtnText}>Reschedule to Today</Text>
+                      <Text style={styles.rescheduleBtnText}>
+                        {trip.rescheduleRequest.requestedDate ? 'Approve' : 'Reschedule to Today'}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1391,7 +1407,7 @@ export default function JobOverviewScreen({ route, navigation }) {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Reschedule request modal — tech enters reason */}
+      {/* Reschedule request modal — tech picks date and enters reason */}
       <Modal visible={!!rescheduleRequestTrip} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setRescheduleRequestTrip(null)}>
         <KeyboardAvoidingView style={{ flex: 1, backgroundColor: Colors.screenBg }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.cancelModalWrap}>
@@ -1403,9 +1419,18 @@ export default function JobOverviewScreen({ route, navigation }) {
             </View>
 
             <Text style={styles.cancelModalSub}>
-              Explain why you need to reschedule this trip. Your admin will be notified and will update the date.
+              Pick a new date and time, and explain why you need to reschedule. Your admin will be notified.
             </Text>
 
+            <Text style={styles.modalLabel}>Requested New Date & Time</Text>
+            <DateTimePickerField
+              value={rescheduleRequestDate}
+              onChange={setRescheduleRequestDate}
+              placeholder="Select a date & time"
+              minimumDate={new Date()}
+            />
+
+            <Text style={styles.modalLabel}>Reason</Text>
             <TextInput
               style={styles.cancelModalInput}
               value={rescheduleReason}
@@ -1413,13 +1438,12 @@ export default function JobOverviewScreen({ route, navigation }) {
               placeholder="e.g. Vehicle issue, site not accessible, emergency…"
               placeholderTextColor={Colors.gray}
               multiline
-              autoFocus
             />
 
             <TouchableOpacity
-              style={[styles.cancelModalBtn, { backgroundColor: Colors.warning }, (rescheduleReason.trim().length < 5 || sendingReschedule) && { opacity: 0.45 }]}
-              disabled={rescheduleReason.trim().length < 5 || sendingReschedule}
-              onPress={() => handleSendRescheduleRequest(rescheduleRequestTrip, rescheduleReason.trim())}
+              style={[styles.cancelModalBtn, { backgroundColor: Colors.warning }, (!rescheduleRequestDate || rescheduleReason.trim().length < 5 || sendingReschedule) && { opacity: 0.45 }]}
+              disabled={!rescheduleRequestDate || rescheduleReason.trim().length < 5 || sendingReschedule}
+              onPress={() => handleSendRescheduleRequest(rescheduleRequestTrip, rescheduleReason.trim(), rescheduleRequestDate)}
             >
               {sendingReschedule
                 ? <ActivityIndicator color={Colors.white} />
