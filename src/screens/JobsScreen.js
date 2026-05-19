@@ -42,6 +42,7 @@ function StarRow({ rating }) {
 function JobCard({ job, onPress, showPayment, rating }) {
   const statusInfo = getJobStatus(job.status);
   const tripCount = job.trips?.length ?? 0;
+  const hasRescheduleRequest = job.trips?.some((t) => !!t.rescheduleRequest);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -75,20 +76,30 @@ function JobCard({ job, onPress, showPayment, rating }) {
           <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
         </View>
       </View>
-      {showPayment && (
+      {(showPayment || hasRescheduleRequest) && (
         <View style={styles.paymentRow}>
-          <View style={[styles.payChip, { backgroundColor: (job.clientPaid ? Colors.completed : Colors.warning) + '15' }]}>
-            <Ionicons name={job.clientPaid ? 'checkmark-circle' : 'time-outline'} size={12} color={job.clientPaid ? Colors.completed : Colors.warning} />
-            <Text style={[styles.payChipText, { color: job.clientPaid ? Colors.completed : Colors.warning }]}>
-              CLIENT {job.clientPaid ? 'PAID' : 'UNPAID'}
-            </Text>
-          </View>
-          <View style={[styles.payChip, { backgroundColor: (job.techPaid ? Colors.completed : Colors.warning) + '15' }]}>
-            <Ionicons name={job.techPaid ? 'checkmark-circle' : 'time-outline'} size={12} color={job.techPaid ? Colors.completed : Colors.warning} />
-            <Text style={[styles.payChipText, { color: job.techPaid ? Colors.completed : Colors.warning }]}>
-              TECH {job.techPaid ? 'PAID' : 'UNPAID'}
-            </Text>
-          </View>
+          {showPayment && (
+            <>
+              <View style={[styles.payChip, { backgroundColor: (job.clientPaid ? Colors.completed : Colors.warning) + '15' }]}>
+                <Ionicons name={job.clientPaid ? 'checkmark-circle' : 'time-outline'} size={12} color={job.clientPaid ? Colors.completed : Colors.warning} />
+                <Text style={[styles.payChipText, { color: job.clientPaid ? Colors.completed : Colors.warning }]}>
+                  CLIENT {job.clientPaid ? 'PAID' : 'UNPAID'}
+                </Text>
+              </View>
+              <View style={[styles.payChip, { backgroundColor: (job.techPaid ? Colors.completed : Colors.warning) + '15' }]}>
+                <Ionicons name={job.techPaid ? 'checkmark-circle' : 'time-outline'} size={12} color={job.techPaid ? Colors.completed : Colors.warning} />
+                <Text style={[styles.payChipText, { color: job.techPaid ? Colors.completed : Colors.warning }]}>
+                  TECH {job.techPaid ? 'PAID' : 'UNPAID'}
+                </Text>
+              </View>
+            </>
+          )}
+          {hasRescheduleRequest && (
+            <View style={[styles.payChip, { backgroundColor: '#FF8C0020' }]}>
+              <Ionicons name="calendar-outline" size={12} color="#FF8C00" />
+              <Text style={[styles.payChipText, { color: '#FF8C00' }]}>RESCHED REQ</Text>
+            </View>
+          )}
         </View>
       )}
     </TouchableOpacity>
