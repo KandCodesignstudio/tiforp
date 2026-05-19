@@ -372,6 +372,68 @@ export default function JobOverviewScreen({ route, navigation }) {
     ]);
   };
 
+  const handleDenyReschedule = (trip) => {
+    Alert.prompt(
+      'Deny Reschedule Request',
+      'Enter a reason for the technician (optional):',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Deny',
+          style: 'destructive',
+          onPress: async (reason) => {
+            const updatedTrips = job.trips.map((t) => ({
+              ...t,
+              scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
+              checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
+              checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+              ...(t.id === trip.id && { rescheduleRequest: null }),
+            }));
+            await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
+            const adminName = profile?.full_name ?? user?.email ?? 'Admin';
+            logJobEvent(jobId, 'reschedule_denied', `Trip ${trip.tripLabel ?? trip.tripNumber} — Admin denied reschedule request${reason ? `: ${reason}` : ''}`, adminName).catch(() => {});
+            const techId = trip.technicianId ?? job.technicianId;
+            if (techId) {
+              notifyUser(
+                techId,
+                'Reschedule Request Denied',
+                `Your reschedule request for Trip ${trip.tripLabel ?? trip.tripNumber} on job ${job.jobNumber ?? jobId} was denied.${reason ? ` Reason: ${reason}` : ''}`,
+                { jobId }
+              ).catch(() => {});
+            }
+          },
+        },
+      ],
+      'plain-text'
+    );
+  };
+
+  const handleCancelRescheduleRequest = async (trip) => {
+    Alert.alert(
+      'Cancel Reschedule Request',
+      'Are you sure you want to withdraw your reschedule request?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel It',
+          style: 'destructive',
+          onPress: async () => {
+            const updatedTrips = job.trips.map((t) => ({
+              ...t,
+              scheduledAt: t.scheduledAt?.toISOString?.() ?? t.scheduledAt ?? null,
+              checkedInAt: t.checkedInAt?.toISOString?.() ?? t.checkedInAt ?? null,
+              checkedOutAt: t.checkedOutAt?.toISOString?.() ?? t.checkedOutAt ?? null,
+              ...(t.id === trip.id && { rescheduleRequest: null }),
+            }));
+            await supabase.from('jobs').update({ trips: updatedTrips }).eq('id', jobId);
+            const techName = profile?.full_name ?? user?.email ?? 'Tech';
+            logJobEvent(jobId, 'reschedule_cancelled', `Trip ${trip.tripLabel ?? trip.tripNumber} — ${techName} withdrew reschedule request`, techName).catch(() => {});
+          },
+        },
+      ]
+    );
+  };
+
   const handleSendRescheduleRequest = async (trip, reason, requestedDate) => {
     setSendingReschedule(true);
     try {
@@ -833,9 +895,17 @@ export default function JobOverviewScreen({ route, navigation }) {
             </TouchableOpacity>
           )}
           {!isAdmin && !!activeTrip.rescheduleRequest && (
-            <View style={[styles.linkBtn, { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-              <Ionicons name="time-outline" size={14} color={Colors.warning} />
-              <Text style={[styles.linkBtnText, { color: Colors.warning }]}>Reschedule request sent — awaiting admin</Text>
+            <View style={{ marginTop: 4 }}>
+              <View style={[styles.linkBtn, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                <Ionicons name="time-outline" size={14} color={Colors.warning} />
+                <Text style={[styles.linkBtnText, { color: Colors.warning }]}>Reschedule request sent — awaiting admin</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.linkBtn, { marginTop: 2 }]}
+                onPress={() => handleCancelRescheduleRequest(activeTrip)}
+              >
+                <Text style={[styles.linkBtnText, { color: Colors.gray }]}>✕ Cancel this request</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -1193,14 +1263,22 @@ export default function JobOverviewScreen({ route, navigation }) {
                         )}
                       </View>
                     </View>
-                    <TouchableOpacity
-                      style={styles.rescheduleBtn}
-                      onPress={() => handleRescheduleToToday(trip)}
-                    >
-                      <Text style={styles.rescheduleBtnText}>
-                        {trip.rescheduleRequest.requestedDate ? 'Approve' : 'Reschedule to Today'}
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <TouchableOpacity
+                        style={[styles.rescheduleBtn, { backgroundColor: '#ef4444' }]}
+                        onPress={() => handleDenyReschedule(trip)}
+                      >
+                        <Text style={styles.rescheduleBtnText}>Deny</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.rescheduleBtn}
+                        onPress={() => handleRescheduleToToday(trip)}
+                      >
+                        <Text style={styles.rescheduleBtnText}>
+                          {trip.rescheduleRequest.requestedDate ? 'Approve' : 'Reschedule to Today'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
                 {!!trip.checkedInAt && (
